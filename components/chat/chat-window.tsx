@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/hooks/use-auth-store';
 import { useSocketStore } from '@/hooks/use-socket-store';
 import ChatHeader from './chat-header';
+import { useSendMessage } from '@/hooks/mutation/use-send-message';
 
 interface ChatWindowProps {
     chatId: string;
@@ -49,21 +50,12 @@ export function ChatWindow(props: ChatWindowProps) {
     });
 
     // Mutation for Sending
-    const sendMessage = useMutation({
-        mutationFn: async (content: string) => {
-            return api.post(`/chats/${chatId}/messages`, { content });
-        },
-        onSuccess: () => {
-            setInput('');
-            queryClient.invalidateQueries({ queryKey: ['messages', chatId] });
-            queryClient.invalidateQueries({ queryKey: ['chats'] }); // Refresh sidebar order
-        },
-    });
+    const sendMessageMutation = useSendMessage(chatId, setInput);
 
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim()) return;
-        sendMessage.mutate(input);
+        sendMessageMutation.mutate(input.trim());
     };
 
     useEffect(() => {
@@ -78,7 +70,7 @@ export function ChatWindow(props: ChatWindowProps) {
                 const firstPage = oldData.pages[0];
                 const updatedFirstPage = {
                     ...firstPage,
-                    data: [newMessage, ...firstPage.data],
+                    messages: [newMessage, ...firstPage.messages],
                 };
                 return {
                     ...oldData,
@@ -115,10 +107,29 @@ export function ChatWindow(props: ChatWindowProps) {
         return () => el.removeEventListener('scroll', hanldeScorll);
     }, [hasNextPage, isFetchingNextPage]);
 
+    const prevScrollHeightRef = useRef<number>(0);
+
+    useEffect(() => {
+        const viewport = autoLoadRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+        const el = viewport as HTMLDivElement | null;
+        if (!el) return;
+
+        if (isFetchingNextPage) {
+            // Store before fetch
+            prevScrollHeightRef.current = el.scrollHeight;
+            console.log('Before:', el.scrollHeight);
+        } else if (prevScrollHeightRef.current > 0) {
+            // Restore after fetch completes
+            const heightDiff = el.scrollHeight - prevScrollHeightRef.current;
+            el.scrollTop = el.scrollTop + heightDiff;
+            prevScrollHeightRef.current = 0;
+        }
+    }, [isFetchingNextPage]);
+
     // Flatten pages for rendering
     const messages =
         data?.pages
-            .flatMap((page: any) => (Array.isArray(page) ? page : page.data || []))
+            .flatMap((page: any) => (Array.isArray(page) ? page : page.messages || []))
             .reverse() || [];
 
     if (!chatId) {
@@ -167,7 +178,7 @@ export function ChatWindow(props: ChatWindowProps) {
                         <div
                             key={msg.id}
                             className={cn(
-                                'group flex gap-2 items-end',
+                                'group flex gap-2 items-center',
                                 msg.senderId === currentUser?.id ? 'flex-row-reverse' : 'flex-row'
                             )}
                         >
@@ -177,6 +188,9 @@ export function ChatWindow(props: ChatWindowProps) {
                                 createdAt={msg.createdAt}
                                 isMe={msg.senderId === currentUser?.id}
                                 senderName={msg.sender?.username}
+                                isOptimistic={
+                                    msg._optimistic || msg.id.toString().startsWith('temp-')
+                                }
                             />
                             <MessageActions
                                 chatId={chatId}
@@ -198,10 +212,10 @@ export function ChatWindow(props: ChatWindowProps) {
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Type a message..."
                         className="flex-1"
-                        disabled={sendMessage.isPending}
+                        disabled={sendMessageMutation.isPending}
                     />
-                    <Button type="submit" disabled={sendMessage.isPending || !input.trim()}>
-                        {sendMessage.isPending ? (
+                    <Button type="submit" disabled={sendMessageMutation.isPending || !input.trim()}>
+                        {sendMessageMutation.isPending ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                             <Send className="h-4 w-4" />

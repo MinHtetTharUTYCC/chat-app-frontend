@@ -1,6 +1,10 @@
+'use client';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { usePresenceStore } from '@/hooks/use-presence-store';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useMemo } from 'react';
 
 interface ChatItemProps {
     id: string;
@@ -8,8 +12,9 @@ interface ChatItemProps {
     lastMessage?: string;
     timestamp?: string; // ISO string
     isActive: boolean;
+    otherParticipants: any[];
+    isDM: boolean;
     onClick: () => void;
-    isOnline?: boolean;
 }
 
 export const ChatItem = ({
@@ -18,9 +23,17 @@ export const ChatItem = ({
     lastMessage,
     timestamp,
     isActive,
+    otherParticipants,
+    isDM,
     onClick,
-    isOnline,
 }: ChatItemProps) => {
+    const { presence, getPresence } = usePresenceStore();
+
+    const isOnline = useMemo(() => {
+        if (isDM) return getPresence(otherParticipants[0]?.userId)?.online === true;
+
+        return otherParticipants.some((p: any) => getPresence(p.userId)?.online);
+    }, [presence]);
     return (
         <div
             onClick={onClick}

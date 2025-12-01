@@ -13,11 +13,14 @@ import { useAppStore } from '@/hooks/use-app-store';
 import { api } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
+import { usePresenceStore } from '@/hooks/use-presence-store';
 
 function ChatHeader({ chatId }: { chatId: string }) {
-    const { socket } = useSocketStore();
     const { currentUser } = useAuthStore();
     const { setChatsOpen } = useAppStore();
+    const getPresence = usePresenceStore((state) => state.getPresence);
+    // to listen at useMemo(presence_update makes changes to 'presence' by calling 'updatePresence')
+    const presence = usePresenceStore((state) => state.presence);
 
     // Fetch specific chat details for header
     const { data: chatDetails, isLoading } = useQuery({
@@ -25,38 +28,6 @@ function ChatHeader({ chatId }: { chatId: string }) {
         queryFn: async () => (await api.get(`/chats/${chatId}`)).data,
         enabled: !!chatId,
     });
-
-    const { data: presenceData, isLoading: presenceLoading } = useQuery({
-        queryKey: ['presence', chatId],
-        queryFn: async () => {
-            if (!chatDetails) return null;
-
-            if (isDM) {
-                const otherUserId = chatDetails.otherParticipants[0].userId;
-                if (!otherUserId) return null;
-                return api.get(`/presence/${otherUserId}`).then((res) => res.data);
-            }
-            //Group chat
-            const results = await Promise.all(
-                chatDetails.participants.map((parti: any) =>
-                    api.get(`/presence/${parti.userId}`).then((res) => ({
-                        ...res.data,
-                    }))
-                )
-            );
-            return results;
-        },
-        enabled: !!chatDetails,
-        refetchInterval: 30000, // Refresh every 30 seconds
-    });
-
-    useEffect(() => {
-        if (!socket) return;
-
-        return () => {
-            socket.off('presence_update');
-        };
-    }, [chatId]);
 
     const getChatTitle = () => {
         if (chatDetails?.isGroup) {
@@ -68,11 +39,32 @@ function ChatHeader({ chatId }: { chatId: string }) {
         return participant ? participant.user.username : 'Direct Message';
     };
 
-    const otherParticipants = chatDetails?.participants?.filter(
-        (parti: any) => parti.userId !== currentUser?.id
-    );
-    const isDM =
-        chatDetails && !chatDetails.isGroup && otherParticipants && otherParticipants.length === 1;
+    const otherParticipants = useMemo(() => {
+        return (
+            chatDetails?.participants?.filter((parti: any) => parti.userId !== currentUser?.id) ||
+            []
+        );
+    }, [chatDetails, currentUser?.id]);
+
+    const isDM = useMemo(() => {
+        return chatDetails && !chatDetails.isGroup && otherParticipants.length === 1;
+    }, [chatDetails, otherParticipants]);
+
+    // Get presence status (reactive to store changes)
+    const dmPresence = useMemo(() => {
+        if (!isDM || otherParticipants.length === 0) return null;
+        console.log('DM PRES:', getPresence(otherParticipants[0].userId));
+        return getPresence(otherParticipants[0].userId);
+    }, [isDM, otherParticipants, getPresence, presence]);
+
+    const groupOnlineCount = useMemo(() => {
+        if (isDM && otherParticipants.lenght === 0) return 0;
+
+        return otherParticipants.filter((p: any) => {
+            const presence = getPresence(p.userId);
+            return presence?.online;
+        }).length;
+    }, [isDM, otherParticipants, getPresence, presence]);
 
     if (isLoading) {
         return (
@@ -101,26 +93,35 @@ function ChatHeader({ chatId }: { chatId: string }) {
                 >
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-8 w-8 relative">
                     <AvatarImage src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" />
                     <AvatarFallback>{chatDetails?.isGroup ? 'GP' : 'DM'}</AvatarFallback>
+
+                    {/* Online indicator for DM */}
+                    {isDM && dmPresence?.online && (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                    )}
                 </Avatar>
                 <div>
                     <h3 className="font-semibold text-sm">{getChatTitle()}</h3>
-                    <span className="text-xs text-green-500">
-                        {presenceLoading && 'Loading...'}
-                        {presenceData && isDM && (
+                    <span className="text-xs text-muted-foreground">
+                        {isDM && dmPresence && (
                             <>
-                                {presenceData.online
-                                    ? 'Online'
-                                    : `LastSeen ${formatDistanceToNow(presenceData.lastSeen, {
-                                          addSuffix: true,
-                                      })}`}
+                                {dmPresence.online ? (
+                                    <span className="text-green-500">Online</span>
+                                ) : dmPresence.lastSeen ? (
+                                    `Last seen ${formatDistanceToNow(
+                                        new Date(parseInt(dmPresence.lastSeen)),
+                                        {
+                                            addSuffix: true,
+                                        }
+                                    )}`
+                                ) : (
+                                    'Offline'
+                                )}
                             </>
                         )}
-                        {presenceData && !isDM && (
-                            <>{presenceData.filter((p: any) => p.online).length} online</>
-                        )}
+                        {!isDM && <span className="text-green-500">{groupOnlineCount} online</span>}
                     </span>
                 </div>
             </div>

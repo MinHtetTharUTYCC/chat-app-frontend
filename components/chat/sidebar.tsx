@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChatItem } from './chat-item';
 import { useAppStore } from '@/hooks/use-app-store';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -11,18 +10,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CreateChatDialog } from './create-chat-dialog'; // Import
 import { NotificationPopover } from './notification-popover'; // Import
 import UserNav from '../user-nav';
-import { redirect, usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { ModeToggle } from '../mode-toggle';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAuthStore } from '@/hooks/use-auth-store';
+import { usePresenceStore } from '@/hooks/use-presence-store';
+import ChatItemsList from './chat-items-list';
 
 export function ChatSidebar() {
     const pathname = usePathname();
     const router = useRouter();
 
-    const { setChatsOpen } = useAppStore();
-    const { currentUser } = useAuthStore();
+    const bulkUpdatePresence = usePresenceStore((state) => state.bulkUpdatePresence);
 
     const { data: chats, isLoading } = useQuery({
         queryKey: ['chats'],
@@ -33,12 +33,6 @@ export function ChatSidebar() {
         },
     });
 
-    // Fetch Presence data to merge with chats
-    const { data: onlineFriends } = useQuery({
-        queryKey: ['presence'],
-        queryFn: async () => (await api.get('/presence/friends')).data,
-    });
-
     useEffect(() => {
         if (!isLoading && chats && chats.length > 0) {
             if (pathname === '/chats') {
@@ -46,6 +40,38 @@ export function ChatSidebar() {
             }
         }
     }, [isLoading, chats, pathname, router]);
+
+    const allUserIds = useMemo(() => {
+        if (!chats) return [];
+
+        const ids = new Set<string>();
+        chats.forEach((chat: any) => {
+            chat.participants.forEach((p: any) => {
+                ids.add(p.userId);
+            });
+        });
+
+        return Array.from(ids);
+    }, [chats]);
+
+    // Fetch presence for all users at once
+    const { data: presenceData } = useQuery({
+        queryKey: ['presence-all-chats', allUserIds.sort().join(',')],
+        queryFn: async () => {
+            if (allUserIds.length === 0) return {};
+            const response = await api.post('/presence/bulk', { userIds: allUserIds });
+            return response.data;
+        },
+        enabled: allUserIds.length > 0,
+        staleTime: Infinity,
+    });
+
+    // Update store when data arrives
+    useEffect(() => {
+        if (presenceData && typeof presenceData === 'object') {
+            bulkUpdatePresence(presenceData);
+        }
+    }, [presenceData, bulkUpdatePresence]);
 
     return (
         <div className="flex flex-col h-full border-r bg-background">
@@ -67,48 +93,12 @@ export function ChatSidebar() {
 
             {/* Chat List */}
             <ScrollArea className="flex-1 p-2">
-                {isLoading
-                    ? Array.from({ length: 50 }).map((_, i) => (
-                          <Skeleton key={i} className="h-16 w-full mb-2" />
-                      ))
-                    : chats?.map((chat: any) => {
-                          // Determine if online (simple logic for DM)
-                          // Assuming chat.participants is array. Find the one that isn't me.
-                          // Then check if their ID exists in onlineFriends
-                          const isOnline = onlineFriends?.some((f: any) =>
-                              chat.participants.some((p: any) => p.id === f.id)
-                          );
+                {isLoading &&
+                    Array.from({ length: 50 }).map((_, i) => (
+                        <Skeleton key={i} className="h-16 w-full mb-2" />
+                    ))}
 
-                          const otherParticipant = chat.participants.find(
-                              (parti: any) => parti.userId != currentUser?.id
-                          );
-
-                          const lastMessage = chat.messages[0];
-
-                          return (
-                              <ChatItem
-                                  key={chat.id}
-                                  id={chat.id}
-                                  name={
-                                      chat.isGroup
-                                          ? chat.title || 'Group Chat'
-                                          : otherParticipant.user.username || 'Unknow User'
-                                  }
-                                  lastMessage={
-                                      lastMessage.senderId == currentUser?.id
-                                          ? `You: ${lastMessage.content}`
-                                          : lastMessage.content || 'No messages yet'
-                                  }
-                                  timestamp={chat.lastMessage?.createdAt}
-                                  isActive={pathname.includes(`/chats/${chat.id}`)}
-                                  onClick={() => {
-                                      router.push(`/chats/${chat.id}`);
-                                      setChatsOpen(false);
-                                  }}
-                                  isOnline={!!isOnline}
-                              />
-                          );
-                      })}
+                {!isLoading && <ChatItemsList chats={chats} />}
             </ScrollArea>
 
             {/* Bottom User Bar */}

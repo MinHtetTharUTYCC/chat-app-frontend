@@ -2,9 +2,12 @@
 
 import { ChatSidebar } from '@/components/chat/sidebar';
 import { useAppStore } from '@/hooks/use-app-store';
+import { usePresenceSetup } from '@/hooks/use-presence-setup';
 
 function ChatsLayout({ children }: { children: React.ReactNode }) {
     const { isChatsOpen } = useAppStore();
+    usePresenceSetup();
+
     return (
         <main className="flex h-screen w-full overflow-hidden bg-background">
             <div
