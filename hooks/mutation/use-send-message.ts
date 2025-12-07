@@ -55,18 +55,24 @@ export function useSendMessage(chatId: string, setInput: (value: string) => void
             });
 
             //update chat list
-            queryClient.setQueryData(query_key_chat_list, (old: any) => {
+            queryClient.setQueryData(query_key_chat_list, (old: any[]|undefined) => {
                 if (!old) return old;
 
-                return old.map((chat: any) =>
-                    chat.id === chatId
-                        ? {
-                              ...chat,
-                              messages: [optimisticMessage],
-                              lastMessageAt: optimisticMessage.createdAt,
-                          }
-                        : chat
-                );
+                const chatIndex = old.findIndex((chat: any) => chat.id === optimisticMessage.chatId);
+
+                if (chatIndex === -1) {
+                    return old;
+                }
+
+                const updatedChat = {
+                    ...old[chatIndex],
+                    messages: [optimisticMessage],
+                    lastMessageAt: optimisticMessage.createdAt,
+                };
+
+                const otherChats = old.filter((_, idx) => idx !== chatIndex);
+                
+                return [updatedChat, ...otherChats];
             });
 
             // clear input

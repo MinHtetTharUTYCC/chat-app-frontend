@@ -1,8 +1,6 @@
 'use client';
 
 import { useAuthStore } from '@/hooks/use-auth-store';
-import { usePresenceStore } from '@/hooks/use-presence-store';
-import React, { useMemo } from 'react';
 import { ChatItem } from './chat-item';
 import { useAppStore } from '@/hooks/use-app-store';
 import { usePathname, useRouter } from 'next/navigation';
@@ -12,17 +10,16 @@ function ChatItemsList({ chats }: { chats: any[] }) {
     const router = useRouter();
 
     const { currentUser } = useAuthStore();
-
     const { setChatsOpen } = useAppStore();
 
     return (
-        <>
+        <div className="w-full">
             {chats?.map((chat: any) => {
                 const otherParticipants = chat.participants.filter(
                     (parti: any) => parti.userId !== currentUser?.id
                 );
 
-                const isDM = !chat.isGroup && otherParticipants.lenght === 1;
+                const isDM = !chat.isGroup && otherParticipants.length === 1;
 
                 const displayName = isDM
                     ? otherParticipants[0]?.user.username || 'Unknown User'
@@ -39,7 +36,7 @@ function ChatItemsList({ chats }: { chats: any[] }) {
                     <ChatItem
                         key={chat.id}
                         id={chat.id}
-                        name={displayName}
+                        displayName={displayName}
                         lastMessage={lastMessageText}
                         timestamp={lastMessage?.createdAt}
                         isActive={pathname.includes(`/chats/${chat.id}`)}
@@ -52,7 +49,7 @@ function ChatItemsList({ chats }: { chats: any[] }) {
                     />
                 );
             })}
-        </>
+        </div>
     );
 }
 

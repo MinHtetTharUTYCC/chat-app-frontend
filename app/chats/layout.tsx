@@ -19,7 +19,7 @@ function ChatsLayout({ children }: { children: React.ReactNode }) {
                 <ChatSidebar />
             </div>
 
-            {/* Main Chat Area - Hidden on mobile if chatList is opened */}
+            {/* Chat window - Hidden on mobile if chatList is opened */}
             <div
                 className={`
                 flex-1 flex-col

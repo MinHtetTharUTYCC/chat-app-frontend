@@ -36,8 +36,10 @@ export function usePresenceSetup() {
             online: boolean;
             lastSeen: string | null;
         }) => {
-            console.log('Presence update received:', data);
-            updatePresence(data.userId, data.online, data.lastSeen);
+            if (data.userId !== currentUser?.id) {
+                console.log('Presence update received:::::', data);
+                updatePresence(data.userId, data.online, data.lastSeen);
+            }
         };
 
         // If already connected, set online immediately

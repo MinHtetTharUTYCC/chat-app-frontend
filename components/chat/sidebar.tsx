@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAppStore } from '@/hooks/use-app-store';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,10 +10,8 @@ import { CreateChatDialog } from './create-chat-dialog'; // Import
 import { NotificationPopover } from './notification-popover'; // Import
 import UserNav from '../user-nav';
 import { usePathname, useRouter } from 'next/navigation';
-
 import { ModeToggle } from '../mode-toggle';
 import { useEffect, useMemo } from 'react';
-import { useAuthStore } from '@/hooks/use-auth-store';
 import { usePresenceStore } from '@/hooks/use-presence-store';
 import ChatItemsList from './chat-items-list';
 
@@ -27,9 +24,8 @@ export function ChatSidebar() {
     const { data: chats, isLoading } = useQuery({
         queryKey: ['chats'],
         queryFn: async () => {
-            // Fetch chats
-            const res = await api.get('/chats');
-            return res.data;
+            const response = await api.get('/chats');
+            return response.data;
         },
     });
 
@@ -74,7 +70,7 @@ export function ChatSidebar() {
     }, [presenceData, bulkUpdatePresence]);
 
     return (
-        <div className="flex flex-col h-full border-r bg-background">
+        <div className="w-full flex flex-col h-full border-r bg-background">
             {/* Header */}
             <div className="p-4 border-b space-y-4">
                 <div className="flex items-center justify-between">

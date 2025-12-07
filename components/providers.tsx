@@ -3,20 +3,30 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/hooks/use-auth-store';
 import { api } from '@/lib/api';
 import { useSocketStore } from '@/hooks/use-socket-store';
+import { useRouter } from 'next/navigation';
+import { useActiveChat } from '@/hooks/params/use-active-chat';
+import { shouldShowMessageToast, shouldShowTitleUpdateToast } from '@/lib/chat/toast-rules';
+import { useAppStore } from '@/hooks/use-app-store';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7000';
 
 const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: React.ReactNode }) {
+    const router = useRouter();
+
+    const activeChatId = useActiveChat();
+    const activeChatIdRef = useRef<string | null>(activeChatId);
+
     const { socket, setSocket } = useSocketStore();
     const { accessToken, currentUser, setCurrentUser } = useAuthStore();
+    const { setChatsOpen } = useAppStore();
 
     // 1. Load user ONCE on page load
     useEffect(() => {
@@ -63,26 +73,110 @@ export function Providers({ children }: { children: React.ReactNode }) {
             }
         };
 
-        newSocket.on('connect', hanldeJoinRooms);
-
-        newSocket.on('new_message', (data) => {
-            console.log('new_message via WS:', data);
-            queryClient.invalidateQueries({ queryKey: ['chats'] });
-            // queryClient.invalidateQueries({ queryKey: ['messages', data.chatId] });
-        });
-
-        newSocket.on('notification', (data) => {
-            queryClient.invalidateQueries({ queryKey: ['chats'] });
-
-            toast(data.title || 'New Notification', {
-                description: data.message,
-                action: {
-                    label: 'View',
-                    onClick: () => console.log('Navigate to', data.chatId),
-                },
+        const handleNewMessage = async (newMessage: any) => {
+            const shouldShowToast = shouldShowMessageToast({
+                activeChatId: activeChatIdRef.current,
+                messageChatId: newMessage.chatId,
+                senderId: newMessage.senderId,
+                currentUserId: currentUser.id,
             });
-        });
 
+            if (shouldShowToast) {
+                toast('New Message', {
+                    description: `${newMessage.sender.username}: ${newMessage.content}`,
+                    action: {
+                        label: 'View',
+                        onClick: () => {
+                            setChatsOpen(false);
+                            router.push(`/chats/${newMessage.chatId}`);
+                        },
+                    },
+                });
+            }
+
+            // ignore messages sent by me(already updated optimistically at sender side)
+            if (newMessage.senderId === currentUser.id) return;
+
+            //update chatsList
+            queryClient.setQueryData(['chats'], (old: any[] | undefined) => {
+                if (!old) return old;
+
+                const chatIndex = old.findIndex((chat: any) => chat.id === newMessage.chatId);
+
+                if (chatIndex === -1) {
+                    return old;
+                }
+
+                const updatedChat = {
+                    ...old[chatIndex],
+                    messages: [newMessage],
+                    lastMessageAt: newMessage.createdAt,
+                };
+
+                const otherChats = old.filter((_, idx) => idx !== chatIndex);
+                
+                return [updatedChat, ...otherChats];
+            });
+
+            //update chat
+            queryClient.setQueryData(['messages', newMessage.chatId], (oldData: any) => {
+                if (!oldData) return oldData;
+
+                const firstPage = oldData.pages[0];
+                const updatedFirstPage = {
+                    ...firstPage,
+                    messages: [newMessage, ...firstPage.messages],
+                };
+                return {
+                    ...oldData,
+                    pages: [updatedFirstPage, ...oldData.pages.slice(1)],
+                };
+            });
+        };
+
+        const handleTitleUpdate = async (details: any) => {
+            console.log('Title update at providers', details);
+
+            const showToast = shouldShowTitleUpdateToast({
+                activeChatId: activeChatIdRef.current,
+                titleChatId: details.chatId,
+                senderId: details.updatedById,
+                currentUserId: currentUser.id,
+            });
+            if (showToast) {
+                toast('Group Name Update', {
+                    description: `${details.username} changed group name to ${details.newTitle}`,
+                    action: {
+                        label: 'View',
+                        onClick: () => {
+                            router.push(`/chats/${details.chatId}`);
+                            setChatsOpen(false);
+                        },
+                    },
+                });
+            }
+
+            // ignore my own updates (already handled optimistically while updating)
+            if (details.updatedById === currentUser.id) return;
+
+            //update queries
+            queryClient.setQueryData(['chats'], (old: any) => {
+                if (!old) return old;
+
+                return old.map((chat: any) =>
+                    chat.id === details.chatId ? { ...chat, title: details.newTitle } : chat
+                );
+            });
+            queryClient.setQueryData(['chat', details.chatId], (old: any) => {
+                if (!old) return old;
+
+                return { ...old, title: details.newTitle };
+            });
+        };
+
+        newSocket.on('connect', hanldeJoinRooms);
+        newSocket.on('title_update', handleTitleUpdate);
+        newSocket.on('new_message', handleNewMessage);
         newSocket.on('disconnect', () => {
             console.log('WS Disconnected');
         });
@@ -91,12 +185,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
         return () => {
             newSocket.off('connect', hanldeJoinRooms);
+            newSocket.off('title_update', handleTitleUpdate);
+            newSocket.off('new_message', handleNewMessage);
             newSocket.off('disconnect');
-            newSocket.off('new_message');
-            newSocket.off('notification');
             newSocket.close();
         };
     }, [currentUser, accessToken]);
+
+    useEffect(() => {
+        activeChatIdRef.current = activeChatId;
+    }, [activeChatId]);
 
     return (
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
