@@ -11,9 +11,9 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/hooks/use-auth-store';
 import { useSocketStore } from '@/hooks/use-socket-store';
 import ChatHeader from './chat-header';
-import { useSendMessage } from '@/hooks/mutation/use-send-message';
+import { useSendMessage } from '@/hooks/chats/mutations/use-send-message';
 import { useTypingSound } from '@/hooks/sound/use-typing-sound';
-import { UseBidirectionalMessages } from '@/hooks/messages/use-bidirectional-messages';
+import { UseMessages } from '@/hooks/messages/queries/use-messages';
 
 interface ChatWindowProps {
     chatId: string;
@@ -50,7 +50,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         isFetchingNextPage,
         isFetchingPreviousPage,
         isLoading,
-    } = UseBidirectionalMessages({ chatId, jumpToMessageId: messageId, jumpToDate: date });
+    } = UseMessages({ chatId, jumpToMessageId: messageId, jumpToDate: date });
     // initially auto-scroll to position(message/date) or bottom(default)
     useEffect(() => {
         if (data?.pages[0]) {
@@ -95,10 +95,6 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         const handleManualScroll = () => {
             const { scrollTop, scrollHeight, clientHeight } = el as HTMLDivElement;
 
-            console.log('middle', hasScrolledToMiddleRef.current);
-            console.log('bottom', hasScrolledToBottomInitiallyRef.current);
-            console.log('sclTOP:', scrollTop);
-
             const isInitialScrollDone =
                 hasScrolledToMiddleRef.current === true ||
                 hasScrolledToBottomInitiallyRef.current === true;
@@ -123,7 +119,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                 isInMiddle
             ) {
                 console.log('⬇️ Loading newer messages...');
-                // fetchPreviousPage();
+                fetchPreviousPage();
             }
         };
 
@@ -165,35 +161,22 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         };
     }, [socket, chatId]);
 
-    // useEffect(() => {
-    //     const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-    //     const el = viewport as HTMLDivElement | null;
-    //     if (!el) return;
+    useEffect(() => {
+        const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+        const el = viewport as HTMLDivElement | null;
+        if (!el) return;
 
-    //     if (isFetchingNextPage) {
-    //         // Store before fetch
-    //         prevScrollHeightRef.current = el.scrollHeight;
-    //     } else if (prevScrollHeightRef.current > 0) {
-    //         // Restore after fetch completes
-    //         const heightDiff = el.scrollHeight - prevScrollHeightRef.current;
-    //         el.scrollTop = el.scrollTop + heightDiff;
-    //         prevScrollHeightRef.current = 0;
-    //     }
-    // }, [isFetchingNextPage]);
-
-    // useEffect(() => {
-    //     const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-    //     const el = viewport as HTMLDivElement | null;
-    //     if (!el) return;
-
-    //     if (isFetchingPreviousPage) {
-    //         prevScrollTopRef.current = el.scrollTop;
-    //     } else if (!isFetchingPreviousPage && prevScrollTopRef.current > 0) {
-    //         // when fetche completes
-    //         el.scrollTop = prevScrollTopRef.current;
-    //         prevScrollTopRef.current = 0;
-    //     }
-    // }, [isFetchingPreviousPage]);
+        if (isFetchingNextPage) {
+            // Store before fetch
+            prevScrollHeightRef.current = el.scrollHeight;
+        } else if (prevScrollHeightRef.current > 0) {
+            // Restore after fetch completes
+            const heightDiff = el.scrollHeight - prevScrollHeightRef.current;
+            console.log(el.scrollHeight,prevScrollHeightRef.current,heightDiff)
+            el.scrollTop = el.scrollTop + heightDiff;
+            prevScrollHeightRef.current = 0;
+        }
+    }, [isFetchingNextPage]);
 
     useEffect(() => {
         hasScrolledToMiddleRef.current = false;

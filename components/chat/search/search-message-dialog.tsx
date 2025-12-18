@@ -1,21 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import { MessageBubble } from '../message-bubble';
 import { useAuthStore } from '@/hooks/use-auth-store';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useDebounce } from '@/hooks/search/use-debounce';
 import { api } from '@/lib/api';
+import { Button } from '@/components/ui/button';
 
 interface SearchMessageDialogProps {
+    chatId: string;
     isOpen: boolean;
     setIsOpen: (val: boolean) => void;
-    chatId: string;
     closeSheet: () => void;
 }
 
@@ -61,6 +68,15 @@ function SarchMessageDialog({ isOpen, setIsOpen, chatId, closeSheet }: SearchMes
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button
+                    className="w-full flex items-center justify-center p-2 cursor-pointer"
+                    onClick={() => setIsOpen(true)}
+                >
+                    <Search className="h-5 w-5" />
+                    Search Messages
+                </Button>
+            </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                     <DialogTitle>Search Messages</DialogTitle>

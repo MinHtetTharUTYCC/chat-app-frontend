@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { useActiveChat } from '@/hooks/params/use-active-chat';
 import { shouldShowMessageToast, shouldShowTitleUpdateToast } from '@/lib/chat/toast-rules';
 import { useAppStore } from '@/hooks/use-app-store';
+import { ChatItemResponse } from '@/types/types';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7000';
 
@@ -114,7 +115,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 };
 
                 const otherChats = old.filter((_, idx) => idx !== chatIndex);
-                
+
                 return [updatedChat, ...otherChats];
             });
 
@@ -135,8 +136,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
         };
 
         const handleTitleUpdate = async (details: any) => {
-            console.log('Title update at providers', details);
-
             const showToast = shouldShowTitleUpdateToast({
                 activeChatId: activeChatIdRef.current,
                 titleChatId: details.chatId,
@@ -174,9 +173,31 @@ export function Providers({ children }: { children: React.ReactNode }) {
             });
         };
 
+        const handleGroupAdded = async (groupChat: ChatItemResponse) => {
+            toast('New Group', {
+                description: `You are added to a new group${
+                    groupChat.title ? `: ${groupChat.title}` : ''
+                }`,
+                action: {
+                    label: 'View',
+                    onClick: () => {
+                        setChatsOpen(false);
+                        router.push(`/chats/${groupChat.id}`);
+                    },
+                },
+            });
+
+            queryClient.setQueryData(['chats'], (old: ChatItemResponse[] | undefined) => {
+                if (!old) return old;
+
+                return [groupChat, ...old];
+            });
+        };
+
         newSocket.on('connect', hanldeJoinRooms);
         newSocket.on('title_update', handleTitleUpdate);
         newSocket.on('new_message', handleNewMessage);
+        newSocket.on('group_added', handleGroupAdded);
         newSocket.on('disconnect', () => {
             console.log('WS Disconnected');
         });
@@ -187,6 +208,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             newSocket.off('connect', hanldeJoinRooms);
             newSocket.off('title_update', handleTitleUpdate);
             newSocket.off('new_message', handleNewMessage);
+            newSocket.on('group_added', handleGroupAdded);
             newSocket.off('disconnect');
             newSocket.close();
         };

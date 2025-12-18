@@ -1,10 +1,8 @@
 'use client';
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../ui/sheet';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { Button } from '../ui/button';
-import { Clock, Loader2, MoreVertical } from 'lucide-react';
+import { Clock, Loader2, MoreVertical, Users } from 'lucide-react';
 import { Avatar, AvatarImage } from '../ui/avatar';
 import { AvatarFallback } from '@radix-ui/react-avatar';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -21,7 +19,9 @@ import { Skeleton } from '../ui/skeleton';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn, formatMessageDate } from '@/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
-import SearchMessage from './search/search-message';
+import UpdateTitleDialog from './title/update-title-dialog';
+import SearchMessageDialog from './search/search-message-dialog';
+import UserAvatar from '../user/user-avatar';
 
 interface ChatSettingsSheetProps {
     chatId: string;
@@ -30,11 +30,6 @@ interface ChatSettingsSheetProps {
     dmParticipantname: string | null;
     participants: any[];
     createdAt: Date;
-}
-
-interface UpdateTitleContext {
-    prevChat: any;
-    prevChatsList: any;
 }
 
 function ChatSettingsSheet({
@@ -54,13 +49,15 @@ function ChatSettingsSheet({
     const { currentUser } = useAuthStore();
 
     const [chatName, setChatName] = useState(dmParticipantname || title || 'Chat Info');
-    const [inputTitle, setInputTitle] = useState(title ?? '');
 
     const autoScrollRef = useRef<HTMLDivElement | null>(null);
     const autoLoadRef = useRef<HTMLDivElement | null>(null);
 
     const [hasScrolled, setHasScrolled] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
+
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isEditTitleOpen, setEditTitleOpen] = useState(false);
 
     const {
         data: pinned,
@@ -103,56 +100,8 @@ function ChatSettingsSheet({
         },
     });
 
-    const updateChatTitleMutation = useMutation({
-        mutationFn: () => api.patch(`/chats/${chatId}/update-title`, { title: inputTitle }),
-        onMutate: async () => {
-            //cancel ongoin queries
-            await queryClient.cancelQueries({ queryKey: ['chat', chatId] });
-            await queryClient.cancelQueries({ queryKey: ['chats'] });
-
-            //snapshop prev values
-            const prevChat = queryClient.getQueryData(['chat', chatId]);
-            const prevChatsList = queryClient.getQueryData(['chats']);
-
-            //optimistic update
-            queryClient.setQueryData(['chat', chatId], (old: any) => ({
-                ...old,
-                title: inputTitle,
-            }));
-            queryClient.setQueryData(['chats'], (old: any) => {
-                if (!old) return old;
-                return old.map((chat: any) =>
-                    chat.id === chatId ? { ...chat, title: inputTitle } : chat
-                );
-            });
-            setChatName(inputTitle);
-
-            return { prevChat, prevChatsList };
-        },
-        onSuccess: () => {
-            toast.success('Group name updated successfully');
-        },
-        onError: (err, content, context: UpdateTitleContext | undefined) => {
-            //rollback
-            if (context?.prevChat) {
-                queryClient.setQueryData(['chat', chatId], context.prevChat);
-                setChatName(context.prevChat.title);
-            }
-            if (context?.prevChatsList) {
-                queryClient.setQueryData(['chats'], context.prevChatsList);
-            }
-
-            console.error('Failed to update title: ', err);
-        },
-    });
-
     const handlePinMsgClick = async (messageId: string) => {
         const params = new URLSearchParams(searchParams);
-        const msgIdParam = params.get('messageId');
-        const dateParam = params.get('date');
-
-        const messagesData = queryClient.getQueryData(['messages', chatId, msgIdParam, dateParam]);
-        // const existingMessages = messagesData?.pages?.flatMap((page) => page.messages) || [];
         params.set('messageId', messageId);
         setIsOpen(false);
         router.replace(`/chats/${chatId}?${params.toString()}`);
@@ -182,11 +131,6 @@ function ChatSettingsSheet({
             setHasScrolled(false);
         }
     }, [isOpen]);
-
-    useEffect(() => {
-        setChatName(title || 'Chat Info');
-        setInputTitle(title || '');
-    }, [title]);
 
     // Scroll when data is loaded and sheet is open
     useEffect(() => {
@@ -246,15 +190,7 @@ function ChatSettingsSheet({
             .reverse() || [];
 
     return (
-        <Sheet
-            open={isOpen}
-            onOpenChange={(open) => {
-                setIsOpen(open);
-                if (!open) {
-                    setInputTitle(title ?? '');
-                }
-            }}
-        >
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="cursor-pointer">
                     <MoreVertical className="h-4 w-4" />
@@ -264,43 +200,40 @@ function ChatSettingsSheet({
                 <div className="shrink-0 space-y-4 pb-4">
                     <SheetHeader>
                         <SheetTitle className="m-0">{chatName}</SheetTitle>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            <p className="text-xs">
-                                {isDM ? 'Chat started ' : 'Group created '}
-                                {formatDistanceToNow(createdAt, { addSuffix: true })}
-                            </p>
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <Users className="h-3 w-3" />
+                                <p className="text-xs">
+                                    {participants.length} participants
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                <p className="text-xs">
+                                    {isDM ? 'Chat started ' : 'Group created '}
+                                    {formatDistanceToNow(createdAt, { addSuffix: true })}
+                                </p>
+                            </div>
                         </div>
-                        <SearchMessage chatId={chatId} onCloseSheet={() => setIsOpen(false)} />
                     </SheetHeader>
+
+                    <SearchMessageDialog
+                        chatId={chatId}
+                        isOpen={isSearchOpen}
+                        setIsOpen={setIsSearchOpen}
+                        closeSheet={() => setIsOpen(false)}
+                    />
 
                     {!isDM && (
                         <>
-                            <Label className="text-xs text-muted-foreground">
-                                Update Group Name
-                            </Label>
-                            <div className="flex gap-2">
-                                <Input
-                                    defaultValue={inputTitle}
-                                    onChange={(e) => {
-                                        const value = e.currentTarget.value;
-                                        setInputTitle(value.trim());
-                                        console.log(inputTitle);
-                                    }}
-                                />
-                                <Button
-                                    size="sm"
-                                    className="cursor-pointer"
-                                    onClick={() => updateChatTitleMutation.mutate()}
-                                    disabled={updateChatTitleMutation.isPending}
-                                >
-                                    {updateChatTitleMutation.isPending ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        'Update'
-                                    )}
-                                </Button>
-                            </div>
+                            <UpdateTitleDialog
+                                chatId={chatId}
+                                title={title || 'Group Chat'}
+                                setChatTitle={setChatName}
+                                isOpen={isEditTitleOpen}
+                                setIsOpen={setEditTitleOpen}
+                                closeSheet={() => setIsOpen(false)}
+                            />
                             <Button
                                 variant="destructive"
                                 className="w-full"
@@ -328,7 +261,7 @@ function ChatSettingsSheet({
                                 </div>
                             )}
                             {!isPinnedLoading && pinnedMessages.length < 1 && (
-                                <p className="text-center text-muted-foreground">
+                                <p className="mt-10 text-center text-sm text-muted-foreground">
                                     No message is pinned.
                                 </p>
                             )}
@@ -358,16 +291,7 @@ function ChatSettingsSheet({
                                                 key={pinMsg.id}
                                                 className="flex items-end gap-2 p-2"
                                             >
-                                                <Avatar className="h-8 w-8 bg-secondary cursor-pointer">
-                                                    <AvatarImage src="https://images.unsplash.com/pphoto-1524504388940-b1c1722653e1?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" />
-                                                    <AvatarFallback className="w-full flex items-center justify-center">
-                                                        <p className="text-center text-xs">
-                                                            {pinMsg.user.username
-                                                                .substring(0, 2)
-                                                                .toUpperCase()}
-                                                        </p>
-                                                    </AvatarFallback>
-                                                </Avatar>
+                                                <UserAvatar username={pinMsg.user.username}/>
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] text-muted-foreground mt-1 mx-1">
                                                         {formatMessageDate(pinMsg.createdAt)}

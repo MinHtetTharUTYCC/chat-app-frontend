@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '../use-auth-store';
+import { useAuthStore } from '../../use-auth-store';
 import { api } from '@/lib/api';
 
 export function useSendMessage(chatId: string, setInput: (value: string) => void) {

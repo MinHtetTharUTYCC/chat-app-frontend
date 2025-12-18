@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -10,150 +10,241 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Loader2, Check } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Loader2, Check, X, UsersRound } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { toast } from 'sonner';
-import { useAppStore } from '@/hooks/use-app-store';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+import UserDialog from '../user/user-dialog';
+import { useCreateGroup } from '@/hooks/chats/mutations/use-create-group';
+
+interface SearchedUser {
+    id: string;
+    username: string;
+}
 
 export function CreateChatDialog() {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
-    const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
     const [groupTitle, setGroupTitle] = useState('');
-    const queryClient = useQueryClient();
-    const { setActiveChatId } = useAppStore();
+    const [selectedUsers, setSelectedUsers] = useState<SearchedUser[]>([]);
 
-    // 1. Search Users (Global Search)
-    const { data: searchResults, isLoading } = useQuery({
-        queryKey: ['search', search],
+    const [clickedDMUser, setClickedDMUser] = useState<{ id: string; username: string } | null>(
+        null
+    );
+    const [isUserOpen, setIsUserOpen] = useState(false);
+
+    // Search Users (Global Search)
+    const { data: searchedUsers, isLoading: isLoadingSearch } = useQuery<SearchedUser[]>({
+        queryKey: ['search-users', search],
         queryFn: async () => {
             if (!search) return [];
-            // Assuming your backend supports ?q= query param for this endpoint,
-            // otherwise fetch all friends via /presence/friends
-            const res = await api.get(`/search?q=${search}`);
-            return res.data; // Expecting User[]
+
+            const response = await api.get(`/users/search?q=${search}`);
+            return response.data;
         },
         enabled: search.length > 1,
     });
 
-    // 2. Start DM Mutation
-    const startChatMutation = useMutation({
-        mutationFn: async (userId: string) => api.post('/chats/start', { otherUserId: userId }),
-        onSuccess: (res) => {
-            queryClient.invalidateQueries({ queryKey: ['chats'] });
-            setActiveChatId(res.data.id);
-            setOpen(false);
-            toast.success('Chat started');
+    const { data: allUsers, isLoading: isLoadingAll } = useQuery<SearchedUser[]>({
+        queryKey: ['all-users'],
+        queryFn: async () => {
+            const { data } = await api.get(`/users`);
+            return data;
         },
+        enabled: open,
     });
 
-    // 3. Create Group Mutation
-    const createGroupMutation = useMutation({
-        mutationFn: async () =>
-            api.post('/chats/create-group', { title: groupTitle, userIds: selectedUsers }),
-        onSuccess: (res) => {
-            queryClient.invalidateQueries({ queryKey: ['chats'] });
-            setActiveChatId(res.data.id);
-            setOpen(false);
-            toast.success('Group created');
-        },
-    });
+    const createGroupMutation = useCreateGroup(
+        groupTitle,
+        selectedUsers.map((u) => u.id)
+    );
 
-    const toggleUser = (userId: string) => {
+    const toggleUser = (user: SearchedUser) => {
         setSelectedUsers((prev) =>
-            prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+            prev.find((u) => u.id == user.id)
+                ? prev.filter((u) => u.id !== user.id)
+                : [...prev, user]
         );
     };
 
+    const usersToShow = search
+        ? !isLoadingSearch
+            ? searchedUsers ?? []
+            : []
+        : !isLoadingAll
+        ? allUsers ?? []
+        : [];
+
+    useEffect(() => {
+        setClickedDMUser(null);
+    }, [open, setOpen]);
+
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button size="icon" variant="ghost">
-                    <Plus className="h-5 w-5" />
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>New Message</DialogTitle>
-                </DialogHeader>
+        <>
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                    <Button size="icon" variant="ghost">
+                        <Plus className="h-5 w-5" />
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                        <DialogTitle>New Message</DialogTitle>
+                    </DialogHeader>
 
-                <Tabs defaultValue="dm" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="dm">Direct Message</TabsTrigger>
-                        <TabsTrigger value="group">Group Chat</TabsTrigger>
-                    </TabsList>
+                    <Tabs defaultValue="dm" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="dm">Direct Message</TabsTrigger>
+                            <TabsTrigger value="group">Group Chat</TabsTrigger>
+                        </TabsList>
 
-                    {/* DM VIEW */}
-                    <TabsContent value="dm" className="space-y-4">
-                        <Input
-                            placeholder="Search users..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                        <ScrollArea className="h-[200px] border rounded-md p-2">
-                            {isLoading && <Loader2 className="h-4 w-4 animate-spin mx-auto" />}
-                            {searchResults?.map((user: any) => (
-                                <div
-                                    key={user.id}
-                                    className="flex items-center gap-3 p-2 hover:bg-accent rounded-md cursor-pointer"
-                                    onClick={() => startChatMutation.mutate(user.id)}
-                                >
-                                    <Avatar>
-                                        <AvatarImage src={user.avatar} />
-                                        <AvatarFallback>{user.username[0]}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="text-sm font-medium">{user.username}</div>
-                                </div>
-                            ))}
-                        </ScrollArea>
-                    </TabsContent>
-
-                    {/* GROUP VIEW */}
-                    <TabsContent value="group" className="space-y-4">
-                        <Input
-                            placeholder="Group Name"
-                            value={groupTitle}
-                            onChange={(e) => setGroupTitle(e.target.value)}
-                        />
-                        <Input
-                            placeholder="Search users to add..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                        <ScrollArea className="h-[200px] border rounded-md p-2">
-                            {/* Reusing search results for selection */}
-                            {searchResults?.map((user: any) => (
-                                <div
-                                    key={user.id}
-                                    className="flex items-center justify-between p-2 hover:bg-accent rounded-md cursor-pointer"
-                                    onClick={() => toggleUser(user.id)}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Avatar>
-                                            <AvatarFallback>{user.username[0]}</AvatarFallback>
+                        {/* DM VIEW */}
+                        <TabsContent value="dm" className="space-y-4">
+                            <Input
+                                placeholder="Search users..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value.trim())}
+                            />
+                            <ScrollArea className="h-[400px] border rounded-md p-2">
+                                {isLoadingSearch && (
+                                    <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                                )}
+                                {usersToShow.map((user) => (
+                                    <div
+                                        key={user.id}
+                                        className={`flex items-center gap-3 p-2 hover:bg-accent rounded-md cursor-pointer`}
+                                        onClick={() => {
+                                            setClickedDMUser(user);
+                                            setIsUserOpen(true);
+                                        }}
+                                    >
+                                        <Avatar className="h-8 w-8 bg-secondary cursor-pointer">
+                                            <AvatarImage src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" />
+                                            <AvatarFallback className="w-full flex items-center justify-center">
+                                                <p className="text-center text-xs">
+                                                    {user.username.substring(0, 2).toUpperCase()}
+                                                </p>
+                                            </AvatarFallback>
                                         </Avatar>
-                                        <span className="text-sm">{user.username}</span>
+                                        <div className="flex-1 text-sm font-medium truncate">
+                                            {user.username}
+                                        </div>
                                     </div>
-                                    {selectedUsers.includes(user.id) && (
-                                        <Check className="h-4 w-4 text-green-500" />
-                                    )}
-                                </div>
-                            ))}
-                        </ScrollArea>
-                        <Button
-                            className="w-full"
-                            disabled={!groupTitle || selectedUsers.length === 0}
-                            onClick={() => createGroupMutation.mutate()}
-                        >
-                            Create Group
-                        </Button>
-                    </TabsContent>
-                </Tabs>
-            </DialogContent>
-        </Dialog>
+                                ))}
+                                {searchedUsers && searchedUsers.length < 1 && (
+                                    <div className="text-center text-sm text-muted-foreground">
+                                        No matched users
+                                    </div>
+                                )}
+                            </ScrollArea>
+                        </TabsContent>
+
+                        {/* GROUP VIEW */}
+                        <TabsContent value="group" className="space-y-4">
+                            <Input
+                                placeholder="Group Name"
+                                value={groupTitle}
+                                onChange={(e) => setGroupTitle(e.target.value.trim())}
+                            />
+                            <Input
+                                placeholder="Search users..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value.trim())}
+                            />
+
+                            <p className="text-sm text-muted-foreground">
+                                {selectedUsers.length} members
+                            </p>
+                            {selectedUsers.length > 0 && (
+                                <ScrollArea className="max-h-[100px]">
+                                    <div className="flex gap-2 flex-wrap">
+                                        {selectedUsers.map((user) => (
+                                            <div
+                                                key={user.id}
+                                                className="w-fit flex items-center gap-1 p-1 rounded-sm cursor-pointer hover:bg-red-300"
+                                                onClick={() => toggleUser(user)}
+                                            >
+                                                <span className="w-fit text-sm">
+                                                    {user.username}
+                                                </span>
+                                                <X className="h-4 w-4" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </ScrollArea>
+                            )}
+
+                            <ScrollArea className="h-[200px] border rounded-md p-2">
+                                {/* Reusing search results for selection */}
+                                {isLoadingSearch && (
+                                    <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                                )}
+                                {usersToShow.map((user: any) => (
+                                    <div
+                                        key={user.id}
+                                        className="flex items-center justify-between p-2 hover:bg-accent rounded-md cursor-pointer"
+                                        onClick={() =>
+                                            toggleUser({ id: user.id, username: user.username })
+                                        }
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Avatar className="h-8 w-8 bg-secondary cursor-pointer">
+                                                <AvatarImage src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" />
+                                                <AvatarFallback className="w-full flex items-center justify-center">
+                                                    <p className="text-center text-xs">
+                                                        {user.username
+                                                            .substring(0, 2)
+                                                            .toUpperCase()}
+                                                    </p>
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <span className="flex-1 text-sm font-medium truncate">
+                                                {user.username}
+                                            </span>
+                                        </div>
+                                        {selectedUsers.find((u) => u.id == user.id) && (
+                                            <Check className="shrink-0 h-4 w-4 text-green-500" />
+                                        )}
+                                    </div>
+                                ))}
+                            </ScrollArea>
+                            <Button
+                                className={`w-full ${
+                                    createGroupMutation.isPending
+                                        ? 'cursor-not-allowed'
+                                        : 'cursor-pointer'
+                                }`}
+                                disabled={!groupTitle || selectedUsers.length === 0}
+                                onClick={() =>
+                                    createGroupMutation.mutate(undefined, {
+                                        onSuccess: () => {
+                                            setOpen(false);
+                                        },
+                                    })
+                                }
+                            >
+                                {createGroupMutation.isPending ? (
+                                    <Loader2 className={`h-4 w-4 animate-spin`} />
+                                ) : (
+                                    <UsersRound className={`h-4 w-4 `} />
+                                )}
+                                Create Group
+                            </Button>
+                        </TabsContent>
+                    </Tabs>
+                </DialogContent>
+            </Dialog>
+            {clickedDMUser && (
+                <UserDialog
+                    user={clickedDMUser}
+                    isOpen={isUserOpen}
+                    setIsOpen={setIsUserOpen}
+                    onDone={() => setOpen(false)}
+                />
+            )}
+        </>
     );
 }

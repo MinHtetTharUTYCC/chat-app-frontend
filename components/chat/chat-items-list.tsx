@@ -4,8 +4,9 @@ import { useAuthStore } from '@/hooks/use-auth-store';
 import { ChatItem } from './chat-item';
 import { useAppStore } from '@/hooks/use-app-store';
 import { usePathname, useRouter } from 'next/navigation';
+import { ChatItemResponse } from '@/types/types';
 
-function ChatItemsList({ chats }: { chats: any[] }) {
+function ChatItemsList({ chats }: { chats: ChatItemResponse[] }) {
     const pathname = usePathname();
     const router = useRouter();
 
@@ -13,7 +14,7 @@ function ChatItemsList({ chats }: { chats: any[] }) {
     const { setChatsOpen } = useAppStore();
 
     return (
-        <div className="w-full">
+        <>
             {chats?.map((chat: any) => {
                 const otherParticipants = chat.participants.filter(
                     (parti: any) => parti.userId !== currentUser?.id
@@ -49,7 +50,7 @@ function ChatItemsList({ chats }: { chats: any[] }) {
                     />
                 );
             })}
-        </div>
+        </>
     );
 }
 

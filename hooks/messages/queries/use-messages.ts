@@ -1,23 +1,29 @@
 import { api } from '@/lib/api';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { messageKeys } from '@/services/messages/messages.keys';
+import { queryOptions, useInfiniteQuery } from '@tanstack/react-query';
 
-interface UseMessagesOptions {
+interface MessagesProps {
     chatId: string;
     jumpToMessageId?: string;
     jumpToDate?: string;
 }
 
-export function UseBidirectionalMessages({
-    chatId,
-    jumpToMessageId,
-    jumpToDate,
-}: UseMessagesOptions) {
-    return useInfiniteQuery({
-        queryKey: ['messages', chatId, jumpToMessageId, jumpToDate],
+interface MessagesResponse {
+    data: any[]; // Replace with your actual message type
+    meta: {
+        nextCursor?: string | null;
+        prevCursor?: string | null;
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+    };
+}
+
+export const getMessagesQueryOptions = (props: MessagesProps) => {
+    const { chatId, jumpToMessageId, jumpToDate } = props;
+    return queryOptions({
+        queryKey: messageKeys.list(chatId, jumpToMessageId, jumpToDate),
         queryFn: async ({ pageParam, direction }) => {
             const params: any = { limit: 20 };
-
-            console.log("Direction",direction)
 
             if (pageParam) {
                 if (direction === 'forward') {
@@ -31,10 +37,7 @@ export function UseBidirectionalMessages({
                 params.aroundDate = jumpToDate;
             }
 
-            console.log("Params:",params)
-
             const res = await api.get(`/chats/${chatId}/messages`, { params });
-            console.log("RESS:",res)
             return res.data;
         },
         initialPageParam: null,
@@ -51,4 +54,7 @@ export function UseBidirectionalMessages({
         // ✅ Keep cache for 10 minutes(default: 5min)
         gcTime: 10 * 60 * 1000,
     });
-}
+};
+
+export const useMessages = (props: MessagesProps) =>
+    useInfiniteQuery(getMessagesQueryOptions(props));

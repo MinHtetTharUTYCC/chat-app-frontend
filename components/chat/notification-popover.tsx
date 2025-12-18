@@ -6,28 +6,37 @@ import { Bell } from 'lucide-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatDistanceToNow } from 'date-fns';
+import { NotificationItem, NotiResponse } from '@/types/types';
+import NotiItem from './noti-Item';
+import { useEffect } from 'react';
 
 export function NotificationPopover() {
-    const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    const {
+        data: notiData,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+    } = useInfiniteQuery<NotiResponse>({
         queryKey: ['notifications'],
         queryFn: async ({ pageParam = null }) => {
-            const res = await api.get('/notifications', {
+            const { data } = await api.get<NotiResponse>('/notifications', {
                 params: {
                     cursor: pageParam,
                 },
             });
-
-            return res.data; // { data, meta }
+            return data;
         },
-
         getNextPageParam: (lastPage) => {
             return lastPage.meta.hasMore ? lastPage.meta.nextCursor : undefined;
         },
         initialPageParam: null,
     });
 
-    const notifications = data?.pages.flatMap((page) => page.data) ?? [];
+    const notifications = notiData?.pages.flatMap((page) => page.data) ?? [];
+
+    useEffect(() => {
+        console.log('notisssss', notiData);
+    }, [notiData]);
 
     return (
         <Popover>
@@ -47,16 +56,8 @@ export function NotificationPopover() {
                             No new notifications
                         </div>
                     ) : (
-                        notifications.map((notif: any) => (
-                            <div key={notif.id} className="p-3 border-b hover:bg-accent text-sm">
-                                <p className="font-medium">{notif.title}</p>
-                                <p className="text-muted-foreground">{notif.message}</p>
-                                <span className="text-xs text-muted-foreground mt-1 block">
-                                    {formatDistanceToNow(new Date(notif.createdAt), {
-                                        addSuffix: true,
-                                    })}
-                                </span>
-                            </div>
+                        notifications.map((notif: NotificationItem) => (
+                            <NotiItem key={notif.id} notification={notif} />
                         ))
                     )}
 
