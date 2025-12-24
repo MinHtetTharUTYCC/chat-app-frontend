@@ -2,7 +2,7 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../ui/sheet';
 import { Button } from '../ui/button';
-import { Clock, Loader2, MoreVertical, Users } from 'lucide-react';
+import { Clock, Loader2, LogOut, MoreVertical, Search, Users } from 'lucide-react';
 import { Avatar, AvatarImage } from '../ui/avatar';
 import { AvatarFallback } from '@radix-ui/react-avatar';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,6 +22,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import UpdateTitleDialog from './title/update-title-dialog';
 import SearchMessageDialog from './search/search-message-dialog';
 import UserAvatar from '../user/user-avatar';
+import { pinnedKeys } from '@/services/messages/messages.keys';
+import { PinItem } from '@/types/types';
+import { useLeaveGroup } from '@/hooks/chats/mutations/use-leave-group';
 
 interface ChatSettingsSheetProps {
     chatId: string;
@@ -41,7 +44,6 @@ function ChatSettingsSheet({
     createdAt,
 }: ChatSettingsSheetProps) {
     const searchParams = useSearchParams();
-    const queryClient = useQueryClient();
     const router = useRouter();
 
     const { setChatsOpen } = useAppStore();
@@ -66,7 +68,7 @@ function ChatSettingsSheet({
         isFetchingNextPage,
         isLoading: isPinnedLoading,
     } = useInfiniteQuery({
-        queryKey: ['pinned', chatId],
+        queryKey: pinnedKeys.chat(chatId),
         queryFn: async ({ pageParam = undefined }) => {
             const response = await api.get(`/chats/${chatId}/pinned`, {
                 params: { cursor: pageParam, limit: 10 },
@@ -91,14 +93,10 @@ function ChatSettingsSheet({
         gcTime: 10 * 60 * 1000,
     });
 
-    const leaveMutation = useMutation({
-        mutationFn: () => api.delete(`/chats/${chatId}/participants/leave-group`),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['chats'] });
-            setChatsOpen(false);
-            toast.success('Leaved group successfully');
-        },
-    });
+    const { mutate: mutateLeaveGroup, isPending: isLeavingGroup } = useLeaveGroup(
+        chatId,
+        setChatsOpen
+    );
 
     const handlePinMsgClick = async (messageId: string) => {
         const params = new URLSearchParams(searchParams);
@@ -184,7 +182,7 @@ function ChatSettingsSheet({
         };
     }, [hasNextPage, isFetchingNextPage, fetchNextPage, isOpen]);
 
-    const pinnedMessages =
+    const pinnedMessages: PinItem[] =
         pinned?.pages
             .flatMap((page: any) => (Array.isArray(page) ? page : page.pinnedMessages || []))
             .reverse() || [];
@@ -199,13 +197,33 @@ function ChatSettingsSheet({
             <SheetContent className="flex flex-col h-screen max-h-screen p-2">
                 <div className="shrink-0 space-y-4 pb-4">
                     <SheetHeader>
-                        <SheetTitle className="m-0">{chatName}</SheetTitle>
+                        <SheetTitle className="mr-4 flex gap-2 overflow-x-clip">
+                            <p className="flex-1">
+                                {chatName}
+                                {chatName}
+                            </p>
+                            {!isDM && (
+                                <UpdateTitleDialog
+                                    key={`${chatId}${isOpen}`}
+                                    chatId={chatId}
+                                    title={title || 'Group Chat'}
+                                    setChatTitle={setChatName}
+                                    isOpen={isEditTitleOpen}
+                                    setIsOpen={setEditTitleOpen}
+                                    closeSheet={() => setIsOpen(false)}
+                                />
+                            )}
+                            <SearchMessageDialog
+                                chatId={chatId}
+                                isOpen={isSearchOpen}
+                                setIsOpen={setIsSearchOpen}
+                                closeSheet={() => setIsOpen(false)}
+                            />
+                        </SheetTitle>
                         <div className="space-y-1">
                             <div className="flex items-center gap-2 text-muted-foreground">
                                 <Users className="h-3 w-3" />
-                                <p className="text-xs">
-                                    {participants.length} participants
-                                </p>
+                                <p className="text-xs">{participants.length} participants</p>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground">
                                 <Clock className="h-3 w-3" />
@@ -217,31 +235,16 @@ function ChatSettingsSheet({
                         </div>
                     </SheetHeader>
 
-                    <SearchMessageDialog
-                        chatId={chatId}
-                        isOpen={isSearchOpen}
-                        setIsOpen={setIsSearchOpen}
-                        closeSheet={() => setIsOpen(false)}
-                    />
-
                     {!isDM && (
-                        <>
-                            <UpdateTitleDialog
-                                chatId={chatId}
-                                title={title || 'Group Chat'}
-                                setChatTitle={setChatName}
-                                isOpen={isEditTitleOpen}
-                                setIsOpen={setEditTitleOpen}
-                                closeSheet={() => setIsOpen(false)}
-                            />
-                            <Button
-                                variant="destructive"
-                                className="w-full"
-                                onClick={() => leaveMutation.mutate()}
-                            >
-                                Leave Group
-                            </Button>
-                        </>
+                        <Button
+                            variant="destructive"
+                            className="w-full"
+                            onClick={mutateLeaveGroup}
+                            disabled={isLeavingGroup}
+                        >
+                            {isLeavingGroup ? <Loader2 className="animate-spin" /> : <LogOut />}
+                            Leave Group
+                        </Button>
                     )}
                 </div>
 
@@ -284,14 +287,14 @@ function ChatSettingsSheet({
                                         </div>
                                     )}
 
-                                    {pinnedMessages.map((pinMsg: any) => {
-                                        const isMe = pinMsg.userId === currentUser?.id;
+                                    {pinnedMessages.map((pinMsg: PinItem) => {
+                                        const isMe = pinMsg.user.id === currentUser?.id;
                                         return (
                                             <div
                                                 key={pinMsg.id}
                                                 className="flex items-end gap-2 p-2"
                                             >
-                                                <UserAvatar username={pinMsg.user.username}/>
+                                                <UserAvatar username={pinMsg.user.username} />
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] text-muted-foreground mt-1 mx-1">
                                                         {formatMessageDate(pinMsg.createdAt)}

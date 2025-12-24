@@ -1,7 +1,7 @@
 'use client';
 
 import { chatKeys } from '@/services/chats/chat.keys';
-import { startChat } from '@/services/chats/start-chat';
+import { startChat } from '@/services/chats/chat.api';
 import { ChatItemResponse } from '@/types/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';

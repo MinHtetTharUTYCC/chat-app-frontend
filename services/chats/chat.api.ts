@@ -1,6 +1,13 @@
 import { api } from '@/lib/api';
 import { ChatItemResponse } from '@/types/types';
 
+export const startChat = async (otherUserId: string): Promise<ChatItemResponse> => {
+    const { data } = await api.post('/chats/start', {
+        otherUserId,
+    });
+    return data;
+};
+
 export const createGroup = async (title: string, userIds: string[]): Promise<ChatItemResponse> => {
     const { data } = await api.post('/chats/create-group', {
         title,
@@ -11,5 +18,14 @@ export const createGroup = async (title: string, userIds: string[]): Promise<Cha
 
 export const getChats = async (): Promise<ChatItemResponse[]> => {
     const { data } = await api.get('/chats');
+    return data;
+};
+
+export const updateTitle = async (chatId: string, title: string) => {
+    const { data } = await api.patch(`/chats/${chatId}/update-title`, { title });
+    return data;
+};
+export const leaveGroup = async (chatId: string) => {
+    const { data } = await api.delete(`/chats/${chatId}/participants/leave-group`);
     return data;
 };

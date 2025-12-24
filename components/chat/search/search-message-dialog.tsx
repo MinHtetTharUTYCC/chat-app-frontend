@@ -69,12 +69,8 @@ function SarchMessageDialog({ isOpen, setIsOpen, chatId, closeSheet }: SearchMes
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button
-                    className="w-full flex items-center justify-center p-2 cursor-pointer"
-                    onClick={() => setIsOpen(true)}
-                >
-                    <Search className="h-5 w-5" />
-                    Search Messages
+                <Button variant={'outline'} size={'icon-sm'} onClick={() => setIsOpen(true)}>
+                    <Search />
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">

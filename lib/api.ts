@@ -1,7 +1,8 @@
-import { useAuthStore } from "@/hooks/use-auth-store";
-import axios from "axios";
+import { useAuthStore } from '@/hooks/use-auth-store';
+import { refresh } from '@/services/auth/auth.api';
+import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:7000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7000';
 
 let isRefreshing = false;
 let refreshPromise: Promise<string> | null = null;
@@ -25,34 +26,41 @@ api.interceptors.response.use(
         const originalRequest = error.config;
 
         // Only refresh on 401
-        if (error.response?.status !== 401) throw error;
-
-        // Do NOT retry refresh request itself
-        if (originalRequest.url.includes("/auth/refresh")) {
-            useAuthStore.getState().logout();
-            // window.location.href = "/login";
+        if (error.response?.status !== 401 || originalRequest._retry) {
             return Promise.reject(error);
         }
 
-        // Start one refresh only
-        if (!isRefreshing) {
-            isRefreshing = true;
-
-            refreshPromise = api.post("/auth/refresh")
-                .then((res) => {
-                    const newToken = res.data.accessToken;
-                    useAuthStore.getState().setAccessToken(newToken);
-                    return newToken;
-                })
-                .finally(() => (isRefreshing = false));
+        // do not refresh if refresh itself failed
+        if (originalRequest.url.includes('/auth/refresh')) {
+            useAuthStore.getState().logout();
+            return Promise.reject(error);
         }
 
-        // Wait for refresh to finish
-        const newToken = await refreshPromise;
+        originalRequest._retry = true;
 
-        // Retry original request
-        originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
-        return api.request(originalRequest);
+        // one refresh only
+        try {
+            if (!isRefreshing) {
+                isRefreshing = true;
+
+                refreshPromise = refresh()
+                    .then(({ accessToken }) => {
+                        useAuthStore.getState().setAccessToken(accessToken);
+                        return accessToken;
+                    })
+                    .finally(() => (isRefreshing = false));
+            }
+
+            // Wait for refresh to finish
+            const newToken = await refreshPromise;
+
+            // retry original request
+            originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+            return api(originalRequest);
+        } catch (refreshError) {
+            useAuthStore.getState().logout();
+            return Promise.reject(refreshError);
+        }
     }
 );
 

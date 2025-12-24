@@ -2,7 +2,6 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,23 +12,19 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form';
-import { api, fetcher } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
-
-const formSchema = z.object({
-    username: z.string().min(3, 'Username must be at least 3 characters'),
-    email: z.string().email('Invalid email address'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
-});
+import { RegisterSchema, RegisterValues } from './validation';
+import { register } from '@/services/auth/auth.api';
 
 export function RegisterForm() {
     const router = useRouter();
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+
+    const form = useForm<RegisterValues>({
+        resolver: zodResolver(RegisterSchema),
         defaultValues: {
             username: '',
             email: '',
@@ -37,9 +32,10 @@ export function RegisterForm() {
         },
     });
 
-    async function onSubmit(values: z.infer<typeof formSchema>) {
+    async function onSubmit(values: RegisterValues) {
         try {
-            await api.post('/auth/register', values);
+            await register(values);
+
             toast.success('Account created successfully');
             router.push('/login');
         } catch (error: any) {
@@ -51,8 +47,7 @@ export function RegisterForm() {
     return (
         <Card className="w-[350px] shadow-lg">
             <CardHeader>
-                <CardTitle>Create Account</CardTitle>
-                <CardDescription>Enter your details to get started</CardDescription>
+                <CardTitle>Create an account</CardTitle>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
@@ -77,7 +72,7 @@ export function RegisterForm() {
                                 <FormItem>
                                     <FormLabel>Email</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="m@example.com" {...field} />
+                                        <Input placeholder="user@example.com" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -90,7 +85,11 @@ export function RegisterForm() {
                                 <FormItem>
                                     <FormLabel>Password</FormLabel>
                                     <FormControl>
-                                        <Input type="password" {...field} />
+                                        <Input
+                                            type="password"
+                                            placeholder="your password"
+                                            {...field}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

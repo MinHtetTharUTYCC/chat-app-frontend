@@ -1,35 +1,46 @@
+'use client';
 import { api } from '@/lib/api';
 import { messageKeys } from '@/services/messages/messages.keys';
-import { queryOptions, useInfiniteQuery } from '@tanstack/react-query';
+import { MessagesResponse } from '@/types/types';
+import { useInfiniteQuery, InfiniteData } from '@tanstack/react-query';
 
-interface MessagesProps {
+interface UseMessagesOptions {
     chatId: string;
     jumpToMessageId?: string;
     jumpToDate?: string;
 }
 
-interface MessagesResponse {
-    data: any[]; // Replace with your actual message type
-    meta: {
-        nextCursor?: string | null;
-        prevCursor?: string | null;
-        hasNextPage: boolean;
-        hasPreviousPage: boolean;
-    };
+type MessagePageParam = {
+    cursor: string;
+    direction: 'forward' | 'backward';
+} | null;
+
+interface MessageQueryParams {
+    limit: number;
+    nextCursor?: string;
+    prevCursor?: string;
+    aroundMessageId?: string;
+    aroundDate?: string;
 }
 
-export const getMessagesQueryOptions = (props: MessagesProps) => {
-    const { chatId, jumpToMessageId, jumpToDate } = props;
-    return queryOptions({
-        queryKey: messageKeys.list(chatId, jumpToMessageId, jumpToDate),
-        queryFn: async ({ pageParam, direction }) => {
-            const params: any = { limit: 20 };
+export function useMessages({ chatId, jumpToMessageId, jumpToDate }: UseMessagesOptions) {
+    return useInfiniteQuery<
+        MessagesResponse,
+        Error,
+        InfiniteData<MessagesResponse>,
+        readonly any[],
+        MessagePageParam
+    >({
+        queryKey: [...messageKeys.chat(chatId), jumpToMessageId, jumpToDate] as const,
+        queryFn: async ({ pageParam }) => {
+            const params: MessageQueryParams = { limit: 20 };
 
             if (pageParam) {
-                if (direction === 'forward') {
-                    params.nextCursor = pageParam;
+                // pageParam is our custom object { cursor, direction }
+                if (pageParam.direction === 'forward') {
+                    params.nextCursor = pageParam.cursor;
                 } else {
-                    params.prevCursor = pageParam;
+                    params.prevCursor = pageParam.cursor;
                 }
             } else if (jumpToMessageId) {
                 params.aroundMessageId = jumpToMessageId;
@@ -41,20 +52,20 @@ export const getMessagesQueryOptions = (props: MessagesProps) => {
             return res.data;
         },
         initialPageParam: null,
-        getNextPageParam: (lastPage) => lastPage.meta?.nextCursor || null, //older (going to top)
-        getPreviousPageParam: (firstPage) => firstPage.meta?.prevCursor || null, //newer(going to bottom)
+        // Forward = Newer messages (scrolling down)
+        getNextPageParam: (lastPage) =>
+            lastPage.meta?.nextCursor
+                ? { cursor: lastPage.meta.nextCursor, direction: 'forward' }
+                : null,
+        // Backward = Older messages (scrolling up)
+        getPreviousPageParam: (firstPage) =>
+            firstPage.meta?.prevCursor
+                ? { cursor: firstPage.meta.prevCursor, direction: 'backward' }
+                : null,
         enabled: !!chatId,
-
-        // ✅ Keep data fresh for 5 minutes
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        // ✅ Don't refetch on window focus
+        staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
-        // ✅ Don't refetch on mount if data exists
         refetchOnMount: false,
-        // ✅ Keep cache for 10 minutes(default: 5min)
         gcTime: 10 * 60 * 1000,
     });
-};
-
-export const useMessages = (props: MessagesProps) =>
-    useInfiniteQuery(getMessagesQueryOptions(props));
+}
