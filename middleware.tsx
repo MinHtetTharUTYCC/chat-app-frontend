@@ -3,20 +3,19 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
     // Check the refresh token cookie set by backend
-    const token = request.cookies.get('refresh_token');
+    const hasRefreshToken = request.cookies.has('refresh_token');
 
-    const isAuthPage =
-        request.nextUrl.pathname.startsWith('/login') ||
-        request.nextUrl.pathname.startsWith('/register');
+    const { pathname } = request.nextUrl;
+
+    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register');
 
     //if no token and not on login or register page, redirect to login
-    if (!token && !isAuthPage) {
-        console.log('No token found, redirecting to login');
+    if (!hasRefreshToken && !isAuthPage) {
         return NextResponse.redirect(new URL('/login', request.url));
     }
 
     //if login or register page and token exists, redirect to home
-    if (token && isAuthPage) {
+    if (hasRefreshToken && isAuthPage) {
         return NextResponse.redirect(new URL('/', request.url));
     }
 
@@ -24,5 +23,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/', '/login', '/register'],
+    matcher: ['/((?!_next|favicon.ico).*)'],
 };

@@ -1,19 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageBubble } from './message-bubble';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Send, Loader2, Circle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageActions } from './message-actions';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/hooks/use-auth-store';
 import { useSocketStore } from '@/hooks/use-socket-store';
 import ChatHeader from './chat-header';
-import { useSendMessage } from '@/hooks/chats/mutations/use-send-message';
 import { useTypingSound } from '@/hooks/sound/use-typing-sound';
-import { UseMessages } from '@/hooks/messages/queries/use-messages';
+import { useMessages } from '@/hooks/messages/queries/use-messages';
+import Typing from './typing';
+import MessageInput from './message-input';
+import { MessageItem } from '@/types/types';
 
 interface ChatWindowProps {
     chatId: string;
@@ -25,7 +26,6 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
     const { currentUser } = useAuthStore();
     const { socket } = useSocketStore();
 
-    const [input, setInput] = useState('');
     const bottomRef = useRef<HTMLDivElement>(null);
     const scrollAreaRef = useRef<HTMLDivElement | null>(null);
     const hasScrolledToBottomInitiallyRef = useRef(false);
@@ -35,12 +35,9 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
     const prevScrollHeightRef = useRef<number>(0); //for up
     const prevScrollTopRef = useRef<number>(0); //for down
 
-    let typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const [isTyping, setIsTyping] = useState(false); //ME
     const [isOtherTyping, setIsOtherTyping] = useState(false); //other user
     useTypingSound(isOtherTyping);
 
-    // Fetch Messages with Cursor Pagination
     const {
         data,
         fetchNextPage, //older msgs
@@ -50,7 +47,8 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         isFetchingNextPage,
         isFetchingPreviousPage,
         isLoading,
-    } = UseMessages({ chatId, jumpToMessageId: messageId, jumpToDate: date });
+    } = useMessages({ chatId, jumpToMessageId: messageId, jumpToDate: date });
+
     // initially auto-scroll to position(message/date) or bottom(default)
     useEffect(() => {
         if (data?.pages[0]) {
@@ -104,7 +102,6 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                 return; // Exit early
             }
 
-
             // Load OLDER messages (scroll upward)
             if (el.scrollTop <= 10 && hasNextPage && !isFetchingNextPage) {
                 console.log('⬆️ Loading older messages...');
@@ -136,15 +133,6 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         hasScrolledToMiddleRef,
     ]);
 
-    // Mutation for Sending
-    const sendMessageMutation = useSendMessage(chatId, setInput);
-
-    const handleSend = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!input.trim()) return;
-        sendMessageMutation.mutate(input.trim());
-    };
-
     useEffect(() => {
         if (!socket || !chatId) return;
 
@@ -172,7 +160,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         } else if (prevScrollHeightRef.current > 0) {
             // Restore after fetch completes
             const heightDiff = el.scrollHeight - prevScrollHeightRef.current;
-            console.log(el.scrollHeight,prevScrollHeightRef.current,heightDiff)
+            console.log(el.scrollHeight, prevScrollHeightRef.current, heightDiff);
             el.scrollTop = el.scrollTop + heightDiff;
             prevScrollHeightRef.current = 0;
         }
@@ -188,12 +176,16 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         hasScrolledToMiddleRef.current = false;
     }, [chatId]);
 
-    // Flatten pages
-    const messages =
-        data?.pages
-            .slice() //shalow copy(without mutating the array) [[msg9,msg10],[msg7,msg8]]
-            .reverse() //reverse => [[msg7,msg8],[msg9,msg10]]
-            .flatMap((page) => page.messages) || [];
+    const messages = useMemo(() => {
+        if (!data?.pages) return [];
+
+        const reversed = [...data.pages].reverse();
+        const flattened = reversed.flatMap((page) => {
+            return page.messages || [];
+        });
+
+        return flattened;
+    }, [data?.pages]);
 
     if (!chatId) {
         return (
@@ -210,6 +202,8 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
             </div>
         );
     }
+
+    if (!currentUser) return <div>You need to authenticate first</div>;
 
     return (
         <div className="flex flex-col h-full bg-background">
@@ -236,34 +230,45 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                     <div className="flex justify-center p-4">
                         <Loader2 className="animate-spin" />
                     </div>
-                ) : (
-                    messages.map((msg: any) => (
-                        <div
-                            key={msg.id}
-                            className={cn(
-                                'group flex gap-2 items-center',
-                                msg.senderId === currentUser?.id ? 'flex-row-reverse' : 'flex-row'
-                            )}
-                        >
-                            <MessageBubble
+                ) : messages.length > 0 ? (
+                    messages.map((msg: MessageItem) => {
+                        if (!msg || !msg.id) return null;
+                        return (
+                            <div
                                 key={msg.id}
-                                msgId={msg.id}
-                                content={msg.content}
-                                createdAt={msg.createdAt}
-                                isMe={msg.senderId === currentUser?.id}
-                                senderName={msg.sender?.username}
-                                isOptimistic={
-                                    msg._optimistic || msg.id.toString().startsWith('temp-')
-                                }
-                            />
-                            <MessageActions
-                                chatId={chatId}
-                                messageId={msg.id}
-                                currentContent={msg.content}
-                                isMe={msg.senderId === currentUser?.id}
-                            />
-                        </div>
-                    ))
+                                className={cn(
+                                    'group flex gap-2 items-center',
+                                    msg.senderId === currentUser?.id
+                                        ? 'flex-row-reverse'
+                                        : 'flex-row'
+                                )}
+                            >
+                                <MessageBubble
+                                    key={msg.id}
+                                    msgId={msg.id}
+                                    content={msg.content}
+                                    createdAt={msg.createdAt}
+                                    isMe={msg.senderId === currentUser?.id}
+                                    senderName={msg.sender?.username}
+                                    isOptimistic={
+                                        msg._optimistic || msg.id.toString().startsWith('temp-')
+                                    }
+                                />
+                                <MessageActions
+                                    chatId={chatId}
+                                    messageId={msg.id}
+                                    currentContent={msg.content}
+                                    isMe={msg.senderId === currentUser?.id}
+                                    isPinned={msg.isPinned}
+                                    canUnpin={
+                                        msg.isPinned && msg.pinnedByUserId === currentUser?.id
+                                    }
+                                />
+                            </div>
+                        );
+                    })
+                ) : (
+                    <div>No messages yet</div>
                 )}
 
                 {isFetchingPreviousPage && (
@@ -280,51 +285,11 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                     </div>
                 )}
                 <div ref={bottomRef} />
-                {isOtherTyping && (
-                    <div className="flex items-end gap-1 ml-6 my-2">
-                        <Circle className="w-2 h-2 animate-bounce [animation-delay:-200ms]" />
-                        <Circle className="w-2 h-2 animate-bounce [animation-delay:-100ms]" />
-                        <Circle className="w-2 h-2 animate-bounce" />
-                    </div>
-                )}
+                {isOtherTyping && <Typing />}
             </ScrollArea>
 
             {/* Input Area */}
-            <div className="p-4 border-t bg-background">
-                <form onSubmit={handleSend} className="flex gap-2">
-                    <Input
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Type a message..."
-                        className="flex-1"
-                        disabled={sendMessageMutation.isPending}
-                        onKeyDown={() => {
-                            if (!isTyping) {
-                                socket.emit('typing', { chatId, isTyping: true });
-                                setIsTyping(true);
-                            }
-
-                            //clear prev timeOut
-                            if (typingTimeoutRef.current) {
-                                clearTimeout(typingTimeoutRef.current);
-                            }
-
-                            //set a new timeout to stop typing after 2 sec of inactivity
-                            typingTimeoutRef.current = setTimeout(() => {
-                                socket.emit('typing', { chatId, isTyping: false });
-                                setIsTyping(false);
-                            }, 2000);
-                        }}
-                    />
-                    <Button type="submit" disabled={sendMessageMutation.isPending || !input.trim()}>
-                        {sendMessageMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <Send className="h-4 w-4" />
-                        )}
-                    </Button>
-                </form>
-            </div>
+            <MessageInput chatId={chatId} />
         </div>
     );
 }

@@ -2,7 +2,6 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,35 +12,32 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form';
-import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { useAuthStore } from '@/hooks/use-auth-store';
-
-const formSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(6),
-});
+import { LoginSchema, LoginValues } from './validation';
+import { login } from '@/services/auth/auth.api';
 
 export function LoginForm() {
     const router = useRouter();
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+    const { setAccessToken, setCurrentUser } = useAuthStore();
+
+    const form = useForm<LoginValues>({
+        resolver: zodResolver(LoginSchema),
         defaultValues: { email: '', password: '' },
     });
 
-    async function onSubmit(values: z.infer<typeof formSchema>) {
+    async function onSubmit(values: LoginValues) {
         try {
-            const res = await api.post('/auth/login', values);
-            const { accessToken, user } = res.data;
-            useAuthStore.getState().setAccessToken(accessToken);
-            useAuthStore.getState().setCurrentUser(user);
+            const { accessToken, user } = await login(values);
+
+            setAccessToken(accessToken);
+            setCurrentUser(user);
 
             toast.success(`Welcome back, ${user.username}!`);
             router.push('/');
-            // router.refresh(); // Refresh to update middleware state
         } catch (error) {
             toast.error('Invalid credentials');
         }
@@ -50,7 +46,7 @@ export function LoginForm() {
     return (
         <Card className="w-[350px]">
             <CardHeader>
-                <CardTitle>Login</CardTitle>
+                <CardTitle>Login to your account</CardTitle>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
@@ -62,7 +58,7 @@ export function LoginForm() {
                                 <FormItem>
                                     <FormLabel>Email</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="m@example.com" {...field} />
+                                        <Input placeholder="user@example.com" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -75,7 +71,11 @@ export function LoginForm() {
                                 <FormItem>
                                     <FormLabel>Password</FormLabel>
                                     <FormControl>
-                                        <Input type="password" {...field} />
+                                        <Input
+                                            type="password"
+                                            placeholder="your password"
+                                            {...field}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -90,9 +90,9 @@ export function LoginForm() {
                         </Button>
                     </form>
                 </Form>
-                <div className="mt-4 text-center text-sm">
+                <div className="mt-4 text-center text-sm text-muted-foreground">
                     Don't have an account?{' '}
-                    <Link href="/register" className="underline">
+                    <Link href="/register" className="underline text-primary hover:text-primary/90">
                         Register
                     </Link>
                 </div>

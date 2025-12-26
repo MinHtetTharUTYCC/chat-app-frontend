@@ -39,7 +39,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         }
 
         loadUser();
-    }, []);
+    }, [setCurrentUser]);
 
     // 2. Connect socket only AFTER user exists
     useEffect(() => {

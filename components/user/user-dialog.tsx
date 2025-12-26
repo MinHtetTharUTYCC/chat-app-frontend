@@ -1,11 +1,4 @@
-import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '../ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Loader2, MessageCircle } from 'lucide-react';
 import { useStartChat } from '@/hooks/chats/mutations/use-start-chat';

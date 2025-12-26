@@ -8,9 +8,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Trash, Edit2, Pin } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { toast } from 'sonner';
 import { useState } from 'react';
 import {
     Dialog,
@@ -20,44 +17,39 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useEditMessage } from '@/hooks/messages/mutations/use-edit-message';
+import { useDeleteMessage } from '@/hooks/messages/mutations/use-delete-message';
+import { usePinMessage } from '@/hooks/messages/mutations/use-pin-message';
+import { useUnpinMessage } from '@/hooks/messages/mutations/use-unpin-message';
 
 interface MessageActionsProps {
     chatId: string;
     messageId: string;
     currentContent: string;
     isMe: boolean;
+    isPinned: boolean;
+    canUnpin: boolean;
 }
 
-export function MessageActions({ chatId, messageId, currentContent, isMe }: MessageActionsProps) {
-    const queryClient = useQueryClient();
+export function MessageActions({
+    chatId,
+    messageId,
+    currentContent,
+    isMe,
+    isPinned,
+    canUnpin,
+}: MessageActionsProps) {
     const [isEditOpen, setEditOpen] = useState(false);
     const [editContent, setEditContent] = useState(currentContent);
 
-    // DELETE
-    const deleteMutation = useMutation({
-        mutationFn: () => api.delete(`/chats/${chatId}/messages/${messageId}`),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['messages', chatId] });
-            toast.success('Message deleted');
-        },
-    });
-
-    // EDIT
-    const editMutation = useMutation({
-        mutationFn: () =>
-            api.patch(`/chats/${chatId}/messages/${messageId}`, { content: editContent }),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['messages', chatId] });
-            setEditOpen(false);
-            toast.success('Message updated');
-        },
-    });
-
-    // PIN
-    const pinMutation = useMutation({
-        mutationFn: () => api.post(`/chats/${chatId}/messages/${messageId}/pin`),
-        onSuccess: () => toast.success('Message pinned'),
-    });
+    // edit
+    const { mutate: mutateEdit, isPending: isPendingEdit } = useEditMessage(chatId, setEditOpen);
+    // delete
+    const { mutate: mutateDeleteMessage, isPending: isPendingDelete } = useDeleteMessage(chatId);
+    // pin
+    const { mutate: mutatePinMessage, isPending: isPendingPin } = usePinMessage(chatId);
+    // unpin
+    const { mutate: mutateUnpinMessage, isPending: isPendingUnpin } = useUnpinMessage(chatId);
 
     return (
         <>
@@ -71,9 +63,22 @@ export function MessageActions({ chatId, messageId, currentContent, isMe }: Mess
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align={isMe ? 'end' : 'start'}>
-                    <DropdownMenuItem onClick={() => pinMutation.mutate()}>
-                        <Pin className="mr-2 h-4 w-4" /> Pin
-                    </DropdownMenuItem>
+                    {canUnpin && (
+                        <DropdownMenuItem
+                            onClick={() => mutateUnpinMessage({ messageId })}
+                            disabled={isPendingPin || isPendingUnpin}
+                        >
+                            <Pin className="mr-2 h-4 w-4" /> Unpin
+                        </DropdownMenuItem>
+                    )}
+                    {!isPinned && (
+                        <DropdownMenuItem
+                            onClick={() => mutatePinMessage({ messageId, content: currentContent })}
+                            disabled={isPendingPin || isPendingUnpin}
+                        >
+                            <Pin className="mr-2 h-4 w-4" /> Pin
+                        </DropdownMenuItem>
+                    )}
                     {isMe && (
                         <>
                             <DropdownMenuItem onClick={() => setEditOpen(true)}>
@@ -81,7 +86,8 @@ export function MessageActions({ chatId, messageId, currentContent, isMe }: Mess
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 className="text-destructive"
-                                onClick={() => deleteMutation.mutate()}
+                                onClick={() => mutateDeleteMessage({ messageId })}
+                                disabled={isPendingDelete}
                             >
                                 <Trash className="mr-2 h-4 w-4" /> Delete
                             </DropdownMenuItem>
@@ -99,8 +105,8 @@ export function MessageActions({ chatId, messageId, currentContent, isMe }: Mess
                     <Input value={editContent} onChange={(e) => setEditContent(e.target.value)} />
                     <DialogFooter>
                         <Button
-                            onClick={() => editMutation.mutate()}
-                            disabled={editMutation.isPending}
+                            onClick={() => mutateEdit({ messageId, content: editContent })}
+                            disabled={isPendingEdit}
                         >
                             Save
                         </Button>
