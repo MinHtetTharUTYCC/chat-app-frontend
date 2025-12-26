@@ -31,7 +31,7 @@ export function useMessages({ chatId, jumpToMessageId, jumpToDate }: UseMessages
         readonly any[],
         MessagePageParam
     >({
-        queryKey: [...messageKeys.chat(chatId), jumpToMessageId, jumpToDate] as const,
+        queryKey: messageKeys.chat(chatId),
         queryFn: async ({ pageParam }) => {
             const params: MessageQueryParams = { limit: 20 };
 

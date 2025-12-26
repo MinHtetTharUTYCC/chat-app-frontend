@@ -195,15 +195,16 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         );
     }
 
-    if (!socket) {
+    if (!socket || isLoading) {
         return (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-                Connecting to chat...
+            <div className="flex flex-col h-full items-center justify-center text-muted-foreground">
+                <Loader2 className="animate-spin" size={40} strokeWidth={2} />
+                <p>Conneting to chat...</p>
             </div>
         );
     }
 
-    if (!currentUser) return <div>You need to authenticate first</div>;
+    if (!currentUser) return <div>You need to sign in first</div>;
 
     return (
         <div className="flex flex-col h-full bg-background">
@@ -226,11 +227,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                     </div>
                 )}
 
-                {isLoading ? (
-                    <div className="flex justify-center p-4">
-                        <Loader2 className="animate-spin" />
-                    </div>
-                ) : messages.length > 0 ? (
+                {messages.length > 0 ? (
                     messages.map((msg: MessageItem) => {
                         if (!msg || !msg.id) return null;
                         return (
@@ -268,7 +265,9 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                         );
                     })
                 ) : (
-                    <div>No messages yet</div>
+                    <div className="w-full flex items-center justify-center text-muted-foreground mt-20">
+                        No messages yet.
+                    </div>
                 )}
 
                 {isFetchingPreviousPage && (

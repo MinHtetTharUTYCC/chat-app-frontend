@@ -288,20 +288,24 @@ function ChatSettingsSheet({
                                     )}
 
                                     {pinnedMessages.map((pinMsg: PinItem) => {
-                                        const isMe = pinMsg.user.id === currentUser?.id;
+                                        const isMe = pinMsg.message.senderId === currentUser?.id;
                                         return (
                                             <div
                                                 key={pinMsg.id}
-                                                className="flex items-end gap-2 p-2"
+                                                className={`flex items-end gap-2 p-2`}
                                             >
-                                                <UserAvatar username={pinMsg.user.username} />
-                                                <div className="flex flex-col">
+                                                {!isMe && (
+                                                    <UserAvatar username={pinMsg.user.username} />
+                                                )}
+                                                <div
+                                                    className={`flex flex-col ${isMe && 'ml-auto'}`}
+                                                >
                                                     <span className="text-[10px] text-muted-foreground mt-1 mx-1">
                                                         {formatMessageDate(pinMsg.createdAt)}
                                                     </span>
                                                     <div
                                                         className={cn(
-                                                            'px-4 py-2 rounded-2xl text-sm cursor-pointer',
+                                                            'text-foreground px-4 py-2 rounded-2xl text-sm cursor-pointer',
                                                             isMe
                                                                 ? 'bg-primary text-primary-foreground rounded-br-none'
                                                                 : 'bg-muted text-foreground rounded-bl-none'

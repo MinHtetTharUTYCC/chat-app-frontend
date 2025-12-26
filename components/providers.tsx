@@ -1,6 +1,6 @@
 'use client';
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { InfiniteData, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { useEffect, useRef } from 'react';
@@ -13,7 +13,15 @@ import { useRouter } from 'next/navigation';
 import { useActiveChat } from '@/hooks/params/use-active-chat';
 import { shouldShowMessageToast, shouldShowTitleUpdateToast } from '@/lib/chat/toast-rules';
 import { useAppStore } from '@/hooks/use-app-store';
-import { ChatItemResponse } from '@/types/types';
+import {
+    ChatItemResponse,
+    GroupAddedReceiver,
+    MessageEditedReceiver,
+    MessagesResponse,
+    NewChatReceiver,
+} from '@/types/types';
+import { chatKeys } from '@/services/chats/chat.keys';
+import { messageKeys } from '@/services/messages/messages.keys';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7000';
 
@@ -126,13 +134,49 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 const firstPage = oldData.pages[0];
                 const updatedFirstPage = {
                     ...firstPage,
-                    messages: [newMessage, ...firstPage.messages],
+                    messages: [...firstPage.messages, newMessage],
                 };
                 return {
                     ...oldData,
                     pages: [updatedFirstPage, ...oldData.pages.slice(1)],
                 };
             });
+        };
+
+        const handleEditMessage = async (editedMessage: MessageEditedReceiver) => {
+            // ignore messages edited by me(already updated optimistically while sending)
+            console.log('ed', editedMessage);
+            if (editedMessage.senderId === currentUser.id) return;
+
+            //sidebar list
+            queryClient.invalidateQueries({ queryKey: chatKeys.all });
+
+            // chat messages
+            let found = false;
+            queryClient.setQueryData<InfiniteData<MessagesResponse>>(
+                messageKeys.chat(editedMessage.chatId),
+                (oldData) => {
+                    if (!oldData) return undefined;
+
+                    return {
+                        ...oldData,
+                        pages: oldData.pages.map((page) => {
+                            if (found) return page; //skip the rest
+
+                            const newMessages = page.messages.map((msg) => {
+                                if (msg.id === editedMessage.messageId) {
+                                    found = true;
+                                    return { ...msg, content: editedMessage.content };
+                                }
+
+                                return msg;
+                            });
+
+                            return { ...page, messages: newMessages };
+                        }),
+                    };
+                }
+            );
         };
 
         const handleTitleUpdate = async (details: any) => {
@@ -173,30 +217,41 @@ export function Providers({ children }: { children: React.ReactNode }) {
             });
         };
 
-        const handleGroupAdded = async (groupChat: ChatItemResponse) => {
+        const handleGroupAdded = async (newGroup: GroupAddedReceiver) => {
             toast('New Group', {
-                description: `You are added to a new group${
-                    groupChat.title ? `: ${groupChat.title}` : ''
-                }`,
+                description: `You are added to a new group: ${newGroup.title}`,
                 action: {
                     label: 'View',
                     onClick: () => {
                         setChatsOpen(false);
-                        router.push(`/chats/${groupChat.id}`);
+                        router.push(`/chats/${newGroup.chatId}`);
                     },
                 },
             });
 
-            queryClient.setQueryData(['chats'], (old: ChatItemResponse[] | undefined) => {
-                if (!old) return old;
+            queryClient.invalidateQueries({ queryKey: chatKeys.all });
+        };
 
-                return [groupChat, ...old];
+        const handleNewChat = async (newChat: NewChatReceiver) => {
+            toast('New Chat', {
+                description: `${newChat.starter.username} started a new chat`,
+                action: {
+                    label: 'View',
+                    onClick: () => {
+                        setChatsOpen(false);
+                        router.push(`/chats/${newChat.chatId}`);
+                    },
+                },
             });
+
+            queryClient.invalidateQueries({ queryKey: chatKeys.all });
         };
 
         newSocket.on('connect', hanldeJoinRooms);
         newSocket.on('title_update', handleTitleUpdate);
         newSocket.on('new_message', handleNewMessage);
+        newSocket.on('message_edited', handleEditMessage);
+        newSocket.on('new_chat', handleNewChat);
         newSocket.on('group_added', handleGroupAdded);
         newSocket.on('disconnect', () => {
             console.log('WS Disconnected');
@@ -208,6 +263,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
             newSocket.off('connect', hanldeJoinRooms);
             newSocket.off('title_update', handleTitleUpdate);
             newSocket.off('new_message', handleNewMessage);
+            newSocket.off('message_edited', handleEditMessage);
+            newSocket.off('new_chat', handleNewChat);
             newSocket.on('group_added', handleGroupAdded);
             newSocket.off('disconnect');
             newSocket.close();

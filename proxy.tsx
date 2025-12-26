@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     // Check the refresh token cookie set by backend
     const hasRefreshToken = request.cookies.has('refresh_token');
 

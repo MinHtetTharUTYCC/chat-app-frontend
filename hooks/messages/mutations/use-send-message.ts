@@ -38,25 +38,26 @@ export function useSendMessage(chatId: string, setInput: (value: string) => void
             const optimisticMessage = {
                 id: tempId,
                 content,
-                senderId: currentUser.id,
                 chatId,
+                senderId: currentUser.id,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 sender: {
                     id: currentUser.id,
-                    username: currentUser.username || 'You',
+                    username: currentUser.username,
                 },
                 _optimistic: true, //UI flag
             };
 
             //update message cache
             queryClient.setQueryData(chatMessagesKey, (old: any) => {
+                console.log('OLD', old);
                 if (!old?.pages) return old;
 
                 const newPages = [...old.pages];
                 newPages[0] = {
                     ...newPages[0],
-                    messages: [optimisticMessage, ...newPages[0].messages],
+                    messages: [...newPages[0].messages, optimisticMessage],
                 };
 
                 return {

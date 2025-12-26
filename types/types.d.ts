@@ -81,8 +81,9 @@ export type PinItem = {
     chatId: string;
     messageId: string;
     message: {
-        content: string;
         id: string;
+        content: string;
+        senderId: string;
     };
     createdAt: string;
     user: {
@@ -101,4 +102,30 @@ export type UpdateTitleResponse = {
 export type LeaveGroupResponse = {
     success: boolean;
     chatId: string;
+};
+
+export type EditMessageRespone = {
+    id: string;
+    content: string;
+    chatId: string;
+};
+
+//receivers
+export type GroupAddedReceiver = {
+    chatId: string;
+    title: string;
+};
+export type NewChatReceiver = {
+    chatId: string;
+    starter: {
+        id: string;
+        username: string;
+    };
+};
+
+export type MessageEditedReceiver = {
+    messageId: string;
+    chatId: string;
+    content: string;
+    senderId: string;
 };

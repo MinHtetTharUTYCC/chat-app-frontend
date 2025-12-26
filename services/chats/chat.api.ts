@@ -1,7 +1,9 @@
 import { api } from '@/lib/api';
 import { ChatItemResponse, LeaveGroupResponse, UpdateTitleResponse } from '@/types/types';
 
-export const startChat = async (otherUserId: string): Promise<ChatItemResponse> => {
+export const startChat = async (
+    otherUserId: string
+): Promise<{ oldChatExists: boolean; chat: ChatItemResponse | { id: string } }> => {
     const { data } = await api.post('/chats/start', {
         otherUserId,
     });

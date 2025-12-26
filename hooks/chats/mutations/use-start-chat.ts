@@ -6,19 +6,28 @@ import { ChatItemResponse } from '@/types/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 
-export const useStartChat = (otherUserId: string) => {
+export const useStartChat = (
+    otherUserId: string,
+    setIsOpen: (open: boolean) => void,
+    onDone: () => void
+) => {
     const queryClient = useQueryClient();
     const router = useRouter();
 
     return useMutation({
         mutationFn: () => startChat(otherUserId),
-        onSuccess: (newChat) => {
-            queryClient.setQueryData(chatKeys.all, (old: ChatItemResponse[] | undefined) => {
-                if (!old) return [newChat];
-                return [newChat, ...old];
-            });
+        onSuccess: ({ oldChatExists, chat }) => {
+            if (!oldChatExists) {
+                queryClient.setQueryData(chatKeys.all, (old: ChatItemResponse[] | undefined) => {
+                    if (!old) return [chat];
+                    return [chat, ...old];
+                });
+            }
 
-            router.push(`/chats/${newChat.id}`);
+            setIsOpen(false);
+            onDone();
+
+            router.push(`/chats/${chat.id}`);
         },
     });
 };
