@@ -194,14 +194,14 @@ function ChatSettingsSheet({
                     <MoreVertical className="h-4 w-4" />
                 </Button>
             </SheetTrigger>
-            <SheetContent className="flex flex-col h-screen max-h-screen p-2">
+            <SheetContent
+                className="flex flex-col h-screen max-h-screen p-2"
+                aria-describedby={undefined}
+            >
                 <div className="shrink-0 space-y-4 pb-4">
-                    <SheetHeader>
+                    <SheetHeader aria-describedby={undefined}>
                         <SheetTitle className="mr-4 flex gap-2 overflow-x-clip">
-                            <p className="flex-1">
-                                {chatName}
-                                {chatName}
-                            </p>
+                            <p className="flex-1">{chatName}</p>
                             {!isDM && (
                                 <UpdateTitleDialog
                                     key={`${chatId}${isOpen}`}
