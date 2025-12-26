@@ -34,6 +34,8 @@ export function ChatSidebar() {
     const allUserIds = useMemo(() => {
         if (!chats) return [];
 
+        console.log('chats:', chats);
+
         const ids = new Set<string>();
         chats.forEach((chat: any) => {
             chat.participants.forEach((p: any) => {

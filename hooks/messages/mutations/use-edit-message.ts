@@ -3,7 +3,7 @@
 import { chatKeys } from '@/services/chats/chat.keys';
 import { editMessage } from '@/services/messages/message.api';
 import { messageKeys } from '@/services/messages/messages.keys';
-import { MessageItem } from '@/types/types';
+import { EditMessageRespone } from '@/types/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -21,7 +21,7 @@ export const useEditMessage = (chatId: string, setEditOpen: (open: boolean) => v
     const chatMessagesKey = messageKeys.chat(chatId);
     const chatsListKey = chatKeys.all;
 
-    return useMutation<MessageItem, Error, EditMessageVars, EditMessageContext>({
+    return useMutation<EditMessageRespone, Error, EditMessageVars, EditMessageContext>({
         mutationFn: ({ messageId, content }) => editMessage(chatId, messageId, content),
         onMutate: async ({ messageId, content }) => {
             //cancel queries

@@ -2,7 +2,7 @@ import { LoginValues, RegisterValues } from '@/components/auth/validation';
 import { api } from '@/lib/api';
 
 export const register = async (values: RegisterValues) => {
-    const { data } = await api.post('/auht/register', values);
+    const { data } = await api.post('/auth/register', values);
     return data;
 };
 

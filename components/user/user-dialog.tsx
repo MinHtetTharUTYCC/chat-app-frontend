@@ -10,7 +10,7 @@ interface UserDialogProps {
     onDone: () => void;
 }
 function UserDialog({ user, isOpen, setIsOpen, onDone }: UserDialogProps) {
-    const startChatMutation = useStartChat(user.id);
+    const { mutate: mutateStartChat, isPending } = useStartChat(user.id, setIsOpen, onDone);
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -23,20 +23,11 @@ function UserDialog({ user, isOpen, setIsOpen, onDone }: UserDialogProps) {
 
                 <DialogFooter>
                     <Button
-                        className={`w-full ${
-                            startChatMutation.isPending ? 'cursor-not-allowed' : 'cursor-pointer'
-                        }`}
-                        disabled={startChatMutation.isPending}
-                        onClick={() =>
-                            startChatMutation.mutate(undefined, {
-                                onSuccess: () => {
-                                    setIsOpen(false);
-                                    onDone();
-                                },
-                            })
-                        }
+                        className={`w-full ${isPending ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                        disabled={isPending}
+                        onClick={() => mutateStartChat()}
                     >
-                        {startChatMutation.isPending ? (
+                        {isPending ? (
                             <Loader2 className={`h-4 w-4 animate-spin`} />
                         ) : (
                             <MessageCircle className={`h-4 w-4 `} />
