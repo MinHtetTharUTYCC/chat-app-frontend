@@ -93,12 +93,12 @@ export type PinItem = {
 };
 
 export type UpdateTitleResponse = {
+    success: boolean;
     chatId: string;
     newTitle: string;
-    success: boolean;
 };
 
 export type LeaveGroupResponse = {
-    chatId: string;
     success: boolean;
+    chatId: string;
 };

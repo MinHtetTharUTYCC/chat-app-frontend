@@ -48,7 +48,10 @@ api.interceptors.response.use(
                         useAuthStore.getState().setAccessToken(accessToken);
                         return accessToken;
                     })
-                    .finally(() => (isRefreshing = false));
+                    .finally(() => {
+                        isRefreshing = false;
+                        refreshPromise = null;
+                    });
             }
 
             // Wait for refresh to finish
