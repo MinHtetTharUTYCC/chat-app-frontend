@@ -5,7 +5,7 @@ import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateChatDialog } from './create-chat-dialog';
-import { NotificationPopover } from './notification-popover';
+import { NotificationPopover } from '../notifications/notification-popover';
 import UserNav from '../user-nav';
 import { usePathname, useRouter } from 'next/navigation';
 import { ModeToggle } from '../mode-toggle';

@@ -14,14 +14,15 @@ import { useActiveChat } from '@/hooks/params/use-active-chat';
 import { shouldShowMessageToast, shouldShowTitleUpdateToast } from '@/lib/chat/toast-rules';
 import { useAppStore } from '@/hooks/use-app-store';
 import {
-    ChatItemResponse,
     GroupAddedReceiver,
     MessageEditedReceiver,
     MessagesResponse,
     NewChatReceiver,
+    PinAddedReceiver,
 } from '@/types/types';
 import { chatKeys } from '@/services/chats/chat.keys';
 import { messageKeys } from '@/services/messages/messages.keys';
+import { notificationKeys } from '@/services/noti/noti.keys';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7000';
 
@@ -246,12 +247,38 @@ export function Providers({ children }: { children: React.ReactNode }) {
             queryClient.invalidateQueries({ queryKey: chatKeys.all });
         };
 
+        const handlePinAdded = async (pinned: PinAddedReceiver) => {
+            // skip mine
+            if (pinned.actor.id === currentUser.id) {
+                return;
+            }
+
+            toast('Pinned', {
+                description: `${pinned.actor.username} pinned your message`,
+                action: {
+                    label: 'View',
+                    onClick: () => {
+                        setChatsOpen(false);
+                        router.push(`/chats/${pinned.chatId}?messageId=${pinned.messageId}`);
+                    },
+                },
+            });
+
+            queryClient.refetchQueries({
+                queryKey: notificationKeys.all,
+                exact: false,
+                type: 'all',
+            });
+        };
+
         newSocket.on('connect', hanldeJoinRooms);
         newSocket.on('title_update', handleTitleUpdate);
         newSocket.on('new_message', handleNewMessage);
         newSocket.on('message_edited', handleEditMessage);
         newSocket.on('new_chat', handleNewChat);
         newSocket.on('group_added', handleGroupAdded);
+        newSocket.on('pin_added', handlePinAdded);
+
         newSocket.on('disconnect', () => {
             console.log('WS Disconnected');
         });
@@ -265,6 +292,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             newSocket.off('message_edited', handleEditMessage);
             newSocket.off('new_chat', handleNewChat);
             newSocket.off('group_added', handleGroupAdded);
+            newSocket.off('pin_added', handlePinAdded);
             newSocket.off('disconnect');
             newSocket.close();
         };

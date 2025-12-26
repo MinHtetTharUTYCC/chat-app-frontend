@@ -1,5 +1,5 @@
 import { api } from '@/lib/api';
-import { EditMessageRespone, MessageItem } from '@/types/types';
+import { EditMessageResponse, MessageItem } from '@/types/types';
 
 export const sendMessage = async (chatId: string, content: string): Promise<MessageItem> => {
     const { data } = await api.post(`/chats/${chatId}/messages`, { content });
@@ -10,7 +10,7 @@ export const editMessage = async (
     chatId: string,
     messageId: string,
     content: string
-): Promise<EditMessageRespone> => {
+): Promise<EditMessageResponse> => {
     const { data } = await api.patch(`/chats/${chatId}/messages/${messageId}`, { content });
     return data;
 };
