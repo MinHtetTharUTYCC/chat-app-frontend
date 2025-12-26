@@ -14,7 +14,7 @@ interface MessageInputProps {
 function MessageInput({ chatId }: MessageInputProps) {
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    let typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const { socket } = useSocketStore();
 
