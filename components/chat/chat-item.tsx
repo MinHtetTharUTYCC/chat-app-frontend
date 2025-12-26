@@ -5,6 +5,7 @@ import { usePresenceStore } from '@/hooks/use-presence-store';
 import { getLastSeenToday } from '@/lib/chat/last-seen-today';
 import { cn, formatMessageDate } from '@/lib/utils';
 import { useMemo } from 'react';
+import UserAvatar from '../user/user-avatar';
 
 interface ChatItemProps {
     id: string;
@@ -49,16 +50,12 @@ export const ChatItem = ({
         <div
             onClick={onClick}
             className={cn(
-                'flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-accent/50',
+                'flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-accent/50 overflow-hidden',
                 isActive && 'bg-accent text-accent-foreground'
             )}
         >
-            <div className="relative">
-                <Avatar className="h-10 w-10">
-                    {/* <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${name}`} /> */}
-                    <AvatarImage src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" />
-                    <AvatarFallback>{displayName.substring(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
+            <div className="relative shrink-0">
+                <UserAvatar size="size-10" username={displayName} />
                 {isOnline && (
                     <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></span>
                 )}
@@ -68,14 +65,14 @@ export const ChatItem = ({
                     </span>
                 )}
             </div>
-            <div className="flex-1 overflow-hidden">
-                <span className="font-medium truncate">{displayName}</span>
-                <div className="flex justify-between items-end">
-                    <p className="flex-1 text-sm text-muted-foreground truncate">
+            <div className="flex-1 min-w-0">
+                <span className="block font-medium truncate">{displayName}</span>
+                <div className="flex justify-between items-end text-muted-foreground">
+                    <p className="flex-1 min-w-0 text-sm line-clamp-1">
                         {lastMessage || 'Start a conversation'}
                     </p>
                     {timestamp && (
-                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                        <span className="text-[10px] whitespace-nowrap">
                             {formatMessageDate(timestamp)}
                         </span>
                     )}

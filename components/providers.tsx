@@ -145,7 +145,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
         const handleEditMessage = async (editedMessage: MessageEditedReceiver) => {
             // ignore messages edited by me(already updated optimistically while sending)
-            console.log('ed', editedMessage);
             if (editedMessage.senderId === currentUser.id) return;
 
             //sidebar list
@@ -265,7 +264,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             newSocket.off('new_message', handleNewMessage);
             newSocket.off('message_edited', handleEditMessage);
             newSocket.off('new_chat', handleNewChat);
-            newSocket.on('group_added', handleGroupAdded);
+            newSocket.off('group_added', handleGroupAdded);
             newSocket.off('disconnect');
             newSocket.close();
         };

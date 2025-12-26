@@ -34,8 +34,6 @@ export function ChatSidebar() {
     const allUserIds = useMemo(() => {
         if (!chats) return [];
 
-        console.log('chats:', chats);
-
         const ids = new Set<string>();
         chats.forEach((chat: any) => {
             chat.participants.forEach((p: any) => {
@@ -56,7 +54,7 @@ export function ChatSidebar() {
     }, [presenceData, bulkUpdatePresence]);
 
     return (
-        <div className="flex flex-col h-screen border-r bg-background">
+        <div className="w-full flex flex-col h-screen border-r bg-background">
             {/* Header */}
             <div className="p-4 border-b space-y-4">
                 <div className="flex items-center justify-between">

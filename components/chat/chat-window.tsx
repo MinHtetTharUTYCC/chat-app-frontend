@@ -199,11 +199,10 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         return (
             <div className="flex flex-col h-full items-center justify-center text-muted-foreground">
                 <Loader2 className="animate-spin" size={40} strokeWidth={2} />
-                <p>Conneting to chat...</p>
+                <p>Connecting to chat...</p>
             </div>
         );
     }
-
     if (!currentUser) return <div>You need to sign in first</div>;
 
     return (
