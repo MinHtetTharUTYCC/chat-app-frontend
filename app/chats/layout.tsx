@@ -11,7 +11,7 @@ function ChatsLayout({ children }: { children: React.ReactNode }) {
     return (
         <main className="flex h-screen w-full overflow-hidden bg-background">
             <div
-                className={`w-full md:w-[320px] lg:w-[380px] border-r shrink-0 ${
+                className={`w-full md:w-[340px] border-r shrink-0 ${
                     isChatsOpen ? 'flex-1' : 'hidden md:flex'
                 }
               `}

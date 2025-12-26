@@ -51,7 +51,6 @@ export function useSendMessage(chatId: string, setInput: (value: string) => void
 
             //update message cache
             queryClient.setQueryData(chatMessagesKey, (old: any) => {
-                console.log('OLD', old);
                 if (!old?.pages) return old;
 
                 const newPages = [...old.pages];

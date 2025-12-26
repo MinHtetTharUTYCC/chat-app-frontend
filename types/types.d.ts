@@ -104,12 +104,11 @@ export type LeaveGroupResponse = {
     chatId: string;
 };
 
-export type EditMessageRespone = {
+export type EditMessageResponse = {
     id: string;
     content: string;
     chatId: string;
 };
-
 //receivers
 export type GroupAddedReceiver = {
     chatId: string;
