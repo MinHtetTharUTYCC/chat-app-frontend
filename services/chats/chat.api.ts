@@ -1,5 +1,6 @@
 import { api } from '@/lib/api';
-import { ChatItemResponse, LeaveGroupResponse, UpdateTitleResponse } from '@/types/types';
+import { LeaveGroupResponse, UpdateTitleResponse } from '@/types/actions';
+import { ChatDetailsResponse, ChatItemResponse } from '@/types/chats';
 
 export const startChat = async (
     otherUserId: string
@@ -20,6 +21,11 @@ export const createGroup = async (title: string, userIds: string[]): Promise<Cha
 
 export const getChats = async (): Promise<ChatItemResponse[]> => {
     const { data } = await api.get('/chats');
+    return data;
+};
+
+export const getChatDetails = async (chatId: string): Promise<ChatDetailsResponse> => {
+    const { data } = await api.get(`/chats/${chatId}`);
     return data;
 };
 

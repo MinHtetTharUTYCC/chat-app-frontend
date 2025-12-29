@@ -18,15 +18,16 @@ function MessageInput({ chatId }: MessageInputProps) {
 
     const { socket } = useSocketStore();
 
-    const { mutate: mutateSendMessage, isPending: isSendingMessage } = useSendMessage(
-        chatId,
-        setInput
-    );
+    const { mutate: mutateSendMessage, isPending: isSendingMessage } = useSendMessage(chatId);
 
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim()) return;
-        mutateSendMessage({ content: input.trim() });
+
+        const msgToSend = input.trim();
+        if (!msgToSend) return;
+
+        setInput('');
+        mutateSendMessage({ content: msgToSend });
     };
 
     useEffect(() => {

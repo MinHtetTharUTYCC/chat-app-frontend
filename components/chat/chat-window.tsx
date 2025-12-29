@@ -14,7 +14,10 @@ import { useTypingSound } from '@/hooks/sound/use-typing-sound';
 import { useMessages } from '@/hooks/messages/queries/use-messages';
 import Typing from './typing';
 import MessageInput from './message-input';
-import { MessageItem } from '@/types/types';
+import { MessageItem } from '@/types/messages';
+import { useChatDetails } from '@/hooks/chats/queries/use-chat-details';
+import { GroupChatPreview } from './group-chat-preview';
+import { TypingReceiver } from '@/types/receivers';
 
 interface ChatWindowProps {
     chatId: string;
@@ -35,9 +38,10 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
     const prevScrollHeightRef = useRef<number>(0); //for up
     const prevScrollTopRef = useRef<number>(0); //for down
 
-    const [isOtherTyping, setIsOtherTyping] = useState(false); //other user
+    const [isOtherTyping, setIsOtherTyping] = useState(false);
     useTypingSound(isOtherTyping);
 
+    const { data: chatDetails, isLoading: isChatLoading } = useChatDetails(chatId);
     const {
         data,
         fetchNextPage, //older msgs
@@ -46,8 +50,13 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         hasPreviousPage,
         isFetchingNextPage,
         isFetchingPreviousPage,
-        isLoading,
-    } = useMessages({ chatId, jumpToMessageId: messageId, jumpToDate: date });
+        isLoading: isLoadingMessages,
+    } = useMessages({
+        chatId,
+        jumpToMessageId: messageId,
+        jumpToDate: date,
+        enabled: chatDetails?.isParticipant ?? false,
+    });
 
     // initially auto-scroll to position(message/date) or bottom(default)
     useEffect(() => {
@@ -136,7 +145,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
     useEffect(() => {
         if (!socket || !chatId) return;
 
-        const handleUserTyping = (typingDetails: any) => {
+        const handleUserTyping = (typingDetails: TypingReceiver) => {
             if (typingDetails.chatId === chatId) {
                 setIsOtherTyping(typingDetails.isTyping);
             }
@@ -195,7 +204,26 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         );
     }
 
-    if (!socket || isLoading) {
+    // Handle chat not found or forbidden
+    if (!chatDetails) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-background text-muted-foreground">
+                <p>Chat not found or you don't have access</p>
+            </div>
+        );
+    }
+
+    //! not working as expected
+    if (chatDetails.isParticipant === false) {
+        return (
+            <div className="flex flex-col h-full bg-background">
+                <ChatHeader chatId={chatId} chatDetails={chatDetails} />
+                <GroupChatPreview chatDetails={chatDetails} />
+            </div>
+        );
+    }
+
+    if (!socket || isLoadingMessages || isChatLoading) {
         return (
             <div className="flex flex-col h-full items-center justify-center text-muted-foreground">
                 <Loader2 className="animate-spin" size={40} strokeWidth={2} />
@@ -203,12 +231,11 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
             </div>
         );
     }
-    if (!currentUser) return <div>You need to sign in first</div>;
 
     return (
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
-            <ChatHeader chatId={chatId} />
+            <ChatHeader chatId={chatId} chatDetails={chatDetails} />
 
             {/* Messages Area */}
             <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 overflow-auto">
@@ -253,6 +280,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                                 <MessageActions
                                     chatId={chatId}
                                     messageId={msg.id}
+                                    msgSenderId={msg.senderId}
                                     currentContent={msg.content}
                                     isMe={msg.senderId === currentUser?.id}
                                     isPinned={msg.isPinned}

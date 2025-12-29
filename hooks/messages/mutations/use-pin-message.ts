@@ -3,50 +3,59 @@
 import { useAuthStore } from '@/hooks/use-auth-store';
 import { ActionResponse, pinMessage } from '@/services/messages/message.api';
 import { messageKeys, pinnedKeys } from '@/services/messages/messages.keys';
-import { MessageItem } from '@/types/types';
+import { MessageInfiniteData, PinnedInfiniteData } from '@/types/messages';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface PinMessageVars {
     messageId: string;
     content: string;
+    msgSenderId: string;
 }
 
 interface PinMessageContext {
-    prevMessages: unknown;
-    prevPinned: unknown;
+    prevMessages?: MessageInfiniteData;
+    prevPinned?: PinnedInfiniteData;
 }
 
 export const usePinMessage = (chatId: string) => {
     const queryClient = useQueryClient();
+    const currentUser = useAuthStore((store) => store.currentUser);
+
     const chatMessagesKey = messageKeys.chat(chatId);
     const pinnedKey = pinnedKeys.chat(chatId);
-    const currentUser = useAuthStore((store) => store.currentUser);
 
     return useMutation<ActionResponse, Error, PinMessageVars, PinMessageContext>({
         mutationFn: ({ messageId }) => pinMessage(chatId, messageId),
-        onMutate: async ({ messageId, content }) => {
+        onMutate: async ({ messageId, content, msgSenderId }) => {
             if (!currentUser) throw new Error('You need to authenticate first');
+
             //cancel queries
-            await queryClient.cancelQueries({ queryKey: pinnedKey });
+
+            await Promise.all([
+                queryClient.cancelQueries({ queryKey: pinnedKey }),
+                queryClient.cancelQueries({ queryKey: chatMessagesKey }),
+            ]);
+
             //snapshot prev state
-            const prevMessages = queryClient.getQueryData(chatMessagesKey);
-            const prevPinned = queryClient.getQueryData(pinnedKey);
+            const prevMessages = queryClient.getQueryData<MessageInfiniteData>(chatMessagesKey);
+            const prevPinned = queryClient.getQueryData<PinnedInfiniteData>(pinnedKey);
 
-            queryClient.setQueryData(chatMessagesKey, (old: any) => {
-                if (!old?.pages) return old;
-
-                return {
-                    ...old,
-                    pages: old.pages.map((page: any) => ({
-                        ...page,
-                        messages: page.messages.map((msg: MessageItem) =>
-                            msg.id === messageId
-                                ? { ...msg, isPinned: true, pinnedByUserId: currentUser.id }
-                                : msg
-                        ),
-                    })),
-                };
-            });
+            queryClient.setQueryData<MessageInfiniteData>(chatMessagesKey, (old) =>
+                old
+                    ? {
+                          ...old,
+                          pages: old.pages.map((page) => ({
+                              ...page,
+                              messages: page.messages.map((msg) =>
+                                  msg.id === messageId
+                                      ? { ...msg, isPinned: true, pinnedByUserId: currentUser.id }
+                                      : msg
+                              ),
+                          })),
+                      }
+                    : old
+            );
 
             const tempId = `temp-${Date.now()}-${Math.random()}`;
             const newPin = {
@@ -61,12 +70,12 @@ export const usePinMessage = (chatId: string) => {
                 message: {
                     id: messageId,
                     content,
+                    senderId: msgSenderId,
                 },
                 createdAt: new Date().toISOString(),
             };
 
-            queryClient.setQueryData(pinnedKey, (old: any) => {
-                console.log('P', old);
+            queryClient.setQueryData<PinnedInfiniteData>(pinnedKey, (old) => {
                 if (!old?.pages) return old;
 
                 const newPages = [...old.pages];
@@ -74,8 +83,6 @@ export const usePinMessage = (chatId: string) => {
                     ...newPages[0],
                     pinnedMessages: [newPin, ...newPages[0].pinnedMessages],
                 };
-
-                console.log('NP', newPages);
 
                 return {
                     ...old,
@@ -86,11 +93,14 @@ export const usePinMessage = (chatId: string) => {
             return { prevMessages, prevPinned };
         },
         onError: (err, _vars, context) => {
+            console.error('Failed to pin message');
+            toast.error('Failed to pin message');
+
             if (context?.prevMessages) {
                 queryClient.setQueryData(chatMessagesKey, context.prevMessages);
             }
-            console.error('Failed to pin message:', err);
         },
+
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: chatMessagesKey });
             queryClient.invalidateQueries({ queryKey: pinnedKey });

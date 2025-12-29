@@ -1,5 +1,22 @@
 import { api } from '@/lib/api';
-import { EditMessageResponse, MessageItem } from '@/types/types';
+import { MessageItem, MessagesResponse, PinnedResponse } from '@/types/messages';
+import { EditMessageResponse } from '@/types/actions';
+
+export interface MessageQueryParams {
+    limit: number;
+    nextCursor?: string;
+    prevCursor?: string;
+    aroundMessageId?: string;
+    aroundDate?: string;
+}
+
+export const getMessages = async (
+    chatId: string,
+    params: MessageQueryParams
+): Promise<MessagesResponse> => {
+    const { data } = await api.get(`/chats/${chatId}/messages`, { params });
+    return data;
+};
 
 export const sendMessage = async (chatId: string, content: string): Promise<MessageItem> => {
     const { data } = await api.post(`/chats/${chatId}/messages`, { content });
@@ -31,5 +48,12 @@ export const pinMessage = async (chatId: string, messageId: string): Promise<Act
 
 export const unpinMessage = async (chatId: string, messageId: string): Promise<ActionResponse> => {
     const { data } = await api.delete(`/chats/${chatId}/messages/${messageId}/pin`);
+    return data;
+};
+
+export const getPinned = async (chatId: string, cursor?: string): Promise<PinnedResponse> => {
+    const { data } = await api.get(`/chats/${chatId}/pinned`, {
+        params: { cursor, limit: 10 },
+    });
     return data;
 };

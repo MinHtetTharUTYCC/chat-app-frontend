@@ -2,11 +2,7 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../ui/sheet';
 import { Button } from '../ui/button';
-import { Clock, Loader2, LogOut, MoreVertical, Search, Users } from 'lucide-react';
-import { Avatar, AvatarImage } from '../ui/avatar';
-import { AvatarFallback } from '@radix-ui/react-avatar';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { Clock, Loader2, LogOut, MoreVertical, Users } from 'lucide-react';
 import { useAppStore } from '@/hooks/use-app-store';
 import { useEffect, useRef, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,7 +10,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { usePresenceStore } from '@/hooks/use-presence-store';
 import { getLastSeenToday } from '@/lib/chat/last-seen-today';
 import { useAuthStore } from '@/hooks/use-auth-store';
-import { toast } from 'sonner';
 import { Skeleton } from '../ui/skeleton';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn, formatMessageDate } from '@/lib/utils';
@@ -22,20 +17,21 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import UpdateTitleDialog from './title/update-title-dialog';
 import SearchMessageDialog from './search/search-message-dialog';
 import UserAvatar from '../user/user-avatar';
-import { pinnedKeys } from '@/services/messages/messages.keys';
-import { PinItem } from '@/types/types';
+import { PinItem } from '@/types/messages';
 import { useLeaveGroup } from '@/hooks/chats/mutations/use-leave-group';
+import { UserParticipant } from '@/types/chats';
+import { usePinned } from '@/hooks/messages/queries/use-pinned';
 
 interface ChatSettingsSheetProps {
     chatId: string;
     isDM: boolean;
     title: string | null;
     dmParticipantname: string | null;
-    participants: any[];
-    createdAt: Date;
+    participants: Array<UserParticipant>;
+    createdAt: string;
 }
 
-function ChatSettingsSheet({
+export default function ChatSettingsSheet({
     chatId,
     isDM,
     title,
@@ -67,31 +63,7 @@ function ChatSettingsSheet({
         hasNextPage,
         isFetchingNextPage,
         isLoading: isPinnedLoading,
-    } = useInfiniteQuery({
-        queryKey: pinnedKeys.chat(chatId),
-        queryFn: async ({ pageParam = undefined }) => {
-            const response = await api.get(`/chats/${chatId}/pinned`, {
-                params: { cursor: pageParam, limit: 10 },
-            });
-            return response.data;
-        },
-        initialPageParam: undefined,
-        getNextPageParam: (lastPage) => {
-            return lastPage.meta?.hasMore ? lastPage.meta.nextCursor : undefined;
-        },
-        enabled: !!chatId && isOpen,
-        // ✅ Keep data fresh for 5 minutes
-        staleTime: 5 * 60 * 1000,
-
-        // ✅ Don't refetch on window focus
-        refetchOnWindowFocus: false,
-
-        // ✅ Don't refetch on mount if data exists
-        refetchOnMount: false,
-
-        // ✅ Keep cache for 10 minutes(default: 5min)
-        gcTime: 10 * 60 * 1000,
-    });
+    } = usePinned({ chatId, isSheetOpen: isOpen });
 
     const { mutate: mutateLeaveGroup, isPending: isLeavingGroup } = useLeaveGroup(
         chatId,
@@ -184,7 +156,7 @@ function ChatSettingsSheet({
 
     const pinnedMessages: PinItem[] =
         pinned?.pages
-            .flatMap((page: any) => (Array.isArray(page) ? page : page.pinnedMessages || []))
+            .flatMap((page) => (Array.isArray(page) ? page : page.pinnedMessages || []))
             .reverse() || [];
 
     return (
@@ -225,11 +197,14 @@ function ChatSettingsSheet({
                                 <Users className="h-3 w-3" />
                                 <p className="text-xs">{participants.length} participants</p>
                             </div>
+
                             <div className="flex items-center gap-2 text-muted-foreground">
                                 <Clock className="h-3 w-3" />
                                 <p className="text-xs">
                                     {isDM ? 'Chat started ' : 'Group created '}
-                                    {formatDistanceToNow(createdAt, { addSuffix: true })}
+                                    {formatDistanceToNow(new Date(createdAt), {
+                                        addSuffix: true,
+                                    })}
                                 </p>
                             </div>
                         </div>
@@ -287,7 +262,7 @@ function ChatSettingsSheet({
                                         </div>
                                     )}
 
-                                    {pinnedMessages.map((pinMsg: PinItem) => {
+                                    {pinnedMessages.map((pinMsg) => {
                                         const isMe = pinMsg.message.senderId === currentUser?.id;
                                         return (
                                             <div
@@ -332,12 +307,12 @@ function ChatSettingsSheet({
                             >
                                 {participants.length > 0 && (
                                     <ScrollArea className="h-full mb-10">
-                                        {participants.map((parti: any) => {
-                                            const presData = getPresence(parti.userId);
+                                        {participants.map((parti) => {
+                                            const presData = getPresence(parti.user.id);
 
                                             const isOnline =
                                                 presData?.online === true ||
-                                                parti.userId === currentUser?.id;
+                                                parti.user.id === currentUser?.id;
 
                                             const lastSeenToday = presData?.lastSeen
                                                 ? getLastSeenToday(presData.lastSeen)
@@ -349,14 +324,10 @@ function ChatSettingsSheet({
                                                     className="flex items-center gap-2 text-sm py-2"
                                                 >
                                                     <div className="relative">
-                                                        <Avatar className="h-10 w-10">
-                                                            <AvatarImage src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" />
-                                                            <AvatarFallback>
-                                                                {parti.user.username
-                                                                    .substring(0, 2)
-                                                                    .toUpperCase()}
-                                                            </AvatarFallback>
-                                                        </Avatar>
+                                                        <UserAvatar
+                                                            username={parti.user.username}
+                                                            size={'size-10'}
+                                                        />
 
                                                         {isOnline && (
                                                             <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></span>
@@ -382,5 +353,3 @@ function ChatSettingsSheet({
         </Sheet>
     );
 }
-
-export default ChatSettingsSheet;

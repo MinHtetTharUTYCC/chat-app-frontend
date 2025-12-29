@@ -1,6 +1,6 @@
 'use client';
 
-import { InfiniteData, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { useEffect, useRef } from 'react';
@@ -13,20 +13,47 @@ import { useRouter } from 'next/navigation';
 import { useActiveChat } from '@/hooks/params/use-active-chat';
 import { shouldShowMessageToast, shouldShowTitleUpdateToast } from '@/lib/chat/toast-rules';
 import { useAppStore } from '@/hooks/use-app-store';
+import { MessageInfiniteData, MessageItem } from '@/types/messages';
 import {
-    GroupAddedReceiver,
-    MessageEditedReceiver,
-    MessagesResponse,
     NewChatReceiver,
+    MessageEditedReceiver,
     PinAddedReceiver,
-} from '@/types/types';
+    GroupAddedReceiver,
+    TitleUpdateReceiver,
+} from '@/types/receivers';
 import { chatKeys } from '@/services/chats/chat.keys';
-import { messageKeys } from '@/services/messages/messages.keys';
+import { messageKeys, pinnedKeys } from '@/services/messages/messages.keys';
 import { notificationKeys } from '@/services/noti/noti.keys';
+import { ChatDetailsQueryData, ChatsListQueryData } from '@/types/chats';
+import { getErrorMessage } from '@/lib/error-handler';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7000';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+    //for actions(POST, PUT, DELETE)
+    mutationCache: new MutationCache({
+        onError: (error, _variables, _context, mutation) => {
+            //if mutation has it's won onError, skip global one
+            if (mutation.options.onError) return;
+
+            const msg = getErrorMessage(error);
+            toast.error(msg);
+        },
+    }),
+    // Global error handler for Queries(GET)
+    queryCache: new QueryCache({
+        onError: (error) => {
+            const msg = getErrorMessage(error);
+            toast.error(`Error loading data: ${msg}`);
+        },
+    }),
+    defaultOptions: {
+        queries: {
+            retry: 1, //don't retry infinitely on error
+            refetchOnWindowFocus: false,
+        },
+    },
+});
 
 export function Providers({ children }: { children: React.ReactNode }) {
     const router = useRouter();
@@ -83,7 +110,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             }
         };
 
-        const handleNewMessage = async (newMessage: any) => {
+        const handleNewMessage = async (newMessage: MessageItem) => {
             const shouldShowToast = shouldShowMessageToast({
                 activeChatId: activeChatIdRef.current,
                 messageChatId: newMessage.chatId,
@@ -108,10 +135,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
             if (newMessage.senderId === currentUser.id) return;
 
             //update chatsList
-            queryClient.setQueryData(['chats'], (old: any[] | undefined) => {
+            queryClient.setQueryData<ChatsListQueryData>(chatKeys.all, (old) => {
                 if (!old) return old;
 
-                const chatIndex = old.findIndex((chat: any) => chat.id === newMessage.chatId);
+                const chatIndex = old.findIndex((chat) => chat.id === newMessage.chatId);
 
                 if (chatIndex === -1) {
                     return old;
@@ -129,31 +156,34 @@ export function Providers({ children }: { children: React.ReactNode }) {
             });
 
             //update chat
-            queryClient.setQueryData(['messages', newMessage.chatId], (oldData: any) => {
-                if (!oldData) return oldData;
+            queryClient.setQueryData<MessageInfiniteData>(
+                ['messages', newMessage.chatId],
+                (oldData) => {
+                    if (!oldData) return oldData;
 
-                const firstPage = oldData.pages[0];
-                const updatedFirstPage = {
-                    ...firstPage,
-                    messages: [...firstPage.messages, newMessage],
-                };
-                return {
-                    ...oldData,
-                    pages: [updatedFirstPage, ...oldData.pages.slice(1)],
-                };
-            });
+                    const firstPage = oldData.pages[0];
+                    const updatedFirstPage = {
+                        ...firstPage,
+                        messages: [...firstPage.messages, newMessage],
+                    };
+                    return {
+                        ...oldData,
+                        pages: [updatedFirstPage, ...oldData.pages.slice(1)],
+                    };
+                }
+            );
         };
 
         const handleEditMessage = async (editedMessage: MessageEditedReceiver) => {
             // ignore messages edited by me(already updated optimistically while sending)
-            if (editedMessage.senderId === currentUser.id) return;
+            if (editedMessage.actor.id === currentUser.id) return;
 
             //sidebar list
             queryClient.invalidateQueries({ queryKey: chatKeys.all });
 
             // chat messages
             let found = false;
-            queryClient.setQueryData<InfiniteData<MessagesResponse>>(
+            queryClient.setQueryData<MessageInfiniteData>(
                 messageKeys.chat(editedMessage.chatId),
                 (oldData) => {
                     if (!oldData) return undefined;
@@ -179,20 +209,20 @@ export function Providers({ children }: { children: React.ReactNode }) {
             );
         };
 
-        const handleTitleUpdate = async (details: any) => {
+        const handleTitleUpdate = async (titleUpdate: TitleUpdateReceiver) => {
             const showToast = shouldShowTitleUpdateToast({
                 activeChatId: activeChatIdRef.current,
-                titleChatId: details.chatId,
-                senderId: details.updatedById,
+                titleChatId: titleUpdate.chatId,
+                senderId: titleUpdate.actor.id,
                 currentUserId: currentUser.id,
             });
             if (showToast) {
                 toast('Group Name Update', {
-                    description: `${details.username} changed group name to ${details.newTitle}`,
+                    description: `${titleUpdate.actor.username} changed group name to ${titleUpdate.newTitle}`,
                     action: {
                         label: 'View',
                         onClick: () => {
-                            router.push(`/chats/${details.chatId}`);
+                            router.push(`/chats/${titleUpdate.chatId}`);
                             setChatsOpen(false);
                         },
                     },
@@ -200,21 +230,24 @@ export function Providers({ children }: { children: React.ReactNode }) {
             }
 
             // ignore my own updates (already handled optimistically while updating)
-            if (details.updatedById === currentUser.id) return;
+            if (titleUpdate.actor.id === currentUser.id) return;
 
             //update queries
-            queryClient.setQueryData(['chats'], (old: any) => {
+            queryClient.setQueryData<ChatsListQueryData>(chatKeys.all, (old) => {
                 if (!old) return old;
 
-                return old.map((chat: any) =>
-                    chat.id === details.chatId ? { ...chat, title: details.newTitle } : chat
+                return old.map((chat) =>
+                    chat.id === titleUpdate.chatId ? { ...chat, title: titleUpdate.newTitle } : chat
                 );
             });
-            queryClient.setQueryData(['chat', details.chatId], (old: any) => {
-                if (!old) return old;
+            queryClient.setQueryData<ChatDetailsQueryData>(
+                chatKeys.chat(titleUpdate.chatId),
+                (old) => {
+                    if (!old) return old;
 
-                return { ...old, title: details.newTitle };
-            });
+                    return { ...old, title: titleUpdate.newTitle };
+                }
+            );
         };
 
         const handleGroupAdded = async (newGroup: GroupAddedReceiver) => {
@@ -264,10 +297,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 },
             });
 
+            // notifications
             queryClient.refetchQueries({
                 queryKey: notificationKeys.all,
                 exact: false,
                 type: 'all',
+            });
+
+            //pinned
+            queryClient.invalidateQueries({
+                queryKey: pinnedKeys.chat(pinned.chatId),
             });
         };
 

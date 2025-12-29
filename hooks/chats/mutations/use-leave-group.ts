@@ -2,7 +2,7 @@
 
 import { leaveGroup } from '@/services/chats/chat.api';
 import { chatKeys } from '@/services/chats/chat.keys';
-import { LeaveGroupResponse } from '@/types/types';
+import { LeaveGroupResponse } from '@/types/actions';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';

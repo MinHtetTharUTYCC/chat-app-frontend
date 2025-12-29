@@ -2,72 +2,66 @@
 
 import { updateTitle } from '@/services/chats/chat.api';
 import { chatKeys } from '@/services/chats/chat.keys';
-import { ChatItemResponse, UpdateTitleResponse } from '@/types/types';
+import { ChatDetailsQueryData, ChatsListQueryData } from '@/types/chats';
+import { UpdateTitleResponse } from '@/types/actions';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 interface UpdateTitleVars {
+    chatId: string;
     title: string;
-    setChatTitle: (title: string) => void;
-    setIsOpen: (open: boolean) => void;
-    closeSheet: () => void;
-}
-interface UpdateTitleContext {
-    prevChat?: ChatItemResponse;
-    prevChatsList?: unknown;
 }
 
-export const useUpdateTitle = (chatId: string, setChatTitle: (title: string) => void) => {
+interface UpdateTitleContext {
+    prevChat?: ChatDetailsQueryData;
+    prevChatsList?: ChatsListQueryData;
+}
+
+export const useUpdateTitle = () => {
     const queryClient = useQueryClient();
 
-    const chatKey = chatKeys.chat(chatId);
-    const chatsListKey = chatKeys.all;
-
     return useMutation<UpdateTitleResponse, Error, UpdateTitleVars, UpdateTitleContext>({
-        mutationFn: ({ title }) => updateTitle(chatId, title),
-        onMutate: async ({ title, setChatTitle, setIsOpen, closeSheet }) => {
+        mutationFn: ({ chatId, title }) => updateTitle(chatId, title),
+        onMutate: async ({ chatId, title }) => {
+            const chatKey = chatKeys.chat(chatId);
+            const chatsListKey = chatKeys.all;
+
             //cancel ongoing queries
-            await queryClient.cancelQueries({ queryKey: chatKey });
-            await queryClient.cancelQueries({ queryKey: chatsListKey });
+            await Promise.all([
+                queryClient.cancelQueries({ queryKey: chatKey }),
+                queryClient.cancelQueries({ queryKey: chatsListKey }),
+            ]);
 
             //snapshop prev values
-            const prevChat: ChatItemResponse | undefined = queryClient.getQueryData([
-                'chat',
-                chatId,
-            ]);
-            const prevChatsList = queryClient.getQueryData(['chats']);
+            const prevChat = queryClient.getQueryData<ChatDetailsQueryData>(chatKey);
+            const prevChatsList = queryClient.getQueryData<ChatsListQueryData>(chatsListKey);
 
-            //optimistic update
-            queryClient.setQueryData(['chat', chatId], (old: any) => ({
-                ...old,
-                title,
-            }));
-            queryClient.setQueryData(['chats'], (old: any) => {
-                if (!old) return old;
-                return old.map((chat: any) => (chat.id === chatId ? { ...chat, title } : chat));
-            });
-
-            setChatTitle(title);
-            setIsOpen(false);
-            closeSheet();
+            // optimistic update
+            // chat details
+            queryClient.setQueryData<ChatDetailsQueryData>(chatKey, (old) =>
+                old ? { ...old, title } : old
+            );
+            // chats list
+            queryClient.setQueryData<ChatsListQueryData>(chatsListKey, (old) =>
+                old ? old.map((chat) => (chat.id === chatId ? { ...chat, title } : chat)) : old
+            );
 
             return { prevChat, prevChatsList };
         },
-        onError: (err, _, context) => {
+        onError: (err, { chatId }, context) => {
             console.error('Failed to update chat title:', err);
             toast.error('Failed to update chat title');
 
             if (context?.prevChat) {
-                queryClient.setQueryData(chatKey, context.prevChat);
-                setChatTitle(context.prevChat.title ?? 'New Group');
+                queryClient.setQueryData(chatKeys.chat(chatId), context.prevChat);
             }
             if (context?.prevChatsList) {
-                queryClient.setQueryData(chatsListKey, context.prevChatsList);
+                queryClient.setQueryData(chatKeys.all, context.prevChatsList);
             }
         },
-        onSettled: async () => {
-            queryClient.invalidateQueries({ queryKey: chatKey });
-            queryClient.invalidateQueries({ queryKey: chatsListKey });
+        onSettled: (_data, _error, { chatId }) => {
+            queryClient.invalidateQueries({ queryKey: chatKeys.chat(chatId) });
+            queryClient.invalidateQueries({ queryKey: chatKeys.all });
         },
     });
 };

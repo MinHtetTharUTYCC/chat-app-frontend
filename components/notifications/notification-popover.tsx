@@ -57,7 +57,7 @@ export function NotificationPopover() {
                     {notifications.length > 0 && (
                         <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
                     )}
-                </Button>{' '}
+                </Button>
             </PopoverTrigger>
             <PopoverContent className="w-100 p-0" align="start">
                 {isError ? (

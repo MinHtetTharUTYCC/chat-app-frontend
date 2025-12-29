@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { usePresenceStore } from '@/hooks/use-presence-store';
 import { getLastSeenToday } from '@/lib/chat/last-seen-today';
 import { cn, formatMessageDate } from '@/lib/utils';
@@ -10,36 +9,36 @@ import UserAvatar from '../user/user-avatar';
 interface ChatItemProps {
     id: string;
     displayName: string;
-    lastMessage?: string;
-    timestamp?: string; // ISO string
-    isActive: boolean;
-    otherParticipants: any[];
     isDM: boolean;
+    lastMsgText?: string;
+    isActive: boolean;
+    otherParticipants: string[];
+    timestamp?: string;
     onClick: () => void;
 }
 
 export const ChatItem = ({
     id,
     displayName,
-    lastMessage,
-    timestamp,
+    isDM,
+    lastMsgText: lastMessage,
     isActive,
     otherParticipants,
-    isDM,
+    timestamp,
     onClick,
 }: ChatItemProps) => {
     const { presence, getPresence } = usePresenceStore();
 
     const isOnline = useMemo(() => {
-        if (isDM) return getPresence(otherParticipants[0]?.userId)?.online === true;
+        if (isDM) return getPresence(otherParticipants[0])?.online === true;
 
-        return otherParticipants.some((p: any) => getPresence(p.userId)?.online);
+        return otherParticipants.some((userId) => getPresence(userId)?.online);
     }, [presence]);
 
     const lastSeenToday = useMemo(() => {
         if (!isDM) return null;
 
-        const lastSeen = getPresence(otherParticipants[0].userId)?.lastSeen || null;
+        const lastSeen = getPresence(otherParticipants[0])?.lastSeen || null;
 
         if (!lastSeen) return null;
 

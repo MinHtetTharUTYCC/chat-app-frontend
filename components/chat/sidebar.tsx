@@ -35,9 +35,9 @@ export function ChatSidebar() {
         if (!chats) return [];
 
         const ids = new Set<string>();
-        chats.forEach((chat: any) => {
-            chat.participants.forEach((p: any) => {
-                ids.add(p.userId);
+        chats.forEach((chat) => {
+            chat.participants.forEach((parti) => {
+                ids.add(parti.userId);
             });
         });
 

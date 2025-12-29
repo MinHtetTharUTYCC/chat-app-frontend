@@ -1,29 +1,29 @@
 'use client';
-import { api } from '@/lib/api';
+import { getMessages, MessageQueryParams } from '@/services/messages/message.api';
 import { messageKeys } from '@/services/messages/messages.keys';
-import { MessagesResponse } from '@/types/types';
+import { MessagesResponse } from '@/types/messages';
 import { useInfiniteQuery, InfiniteData } from '@tanstack/react-query';
 
 interface UseMessagesOptions {
     chatId: string;
     jumpToMessageId?: string;
     jumpToDate?: string;
+    enabled?: boolean;
 }
 
-type MessagePageParam = {
-    cursor: string;
-    direction: 'forward' | 'backward';
-} | null;
+type MessagePageParam =
+    | {
+          cursor: string;
+          direction: 'forward' | 'backward';
+      }
+    | undefined;
 
-interface MessageQueryParams {
-    limit: number;
-    nextCursor?: string;
-    prevCursor?: string;
-    aroundMessageId?: string;
-    aroundDate?: string;
-}
-
-export function useMessages({ chatId, jumpToMessageId, jumpToDate }: UseMessagesOptions) {
+export function useMessages({
+    chatId,
+    jumpToMessageId,
+    jumpToDate,
+    enabled = true,
+}: UseMessagesOptions) {
     return useInfiniteQuery<
         MessagesResponse,
         Error,
@@ -48,10 +48,9 @@ export function useMessages({ chatId, jumpToMessageId, jumpToDate }: UseMessages
                 params.aroundDate = jumpToDate;
             }
 
-            const res = await api.get(`/chats/${chatId}/messages`, { params });
-            return res.data;
+            return getMessages(chatId, params);
         },
-        initialPageParam: null,
+        initialPageParam: undefined,
         // Forward = Newer messages (scrolling down)
         getNextPageParam: (lastPage) =>
             lastPage.meta?.nextCursor
@@ -62,7 +61,7 @@ export function useMessages({ chatId, jumpToMessageId, jumpToDate }: UseMessages
             firstPage.meta?.prevCursor
                 ? { cursor: firstPage.meta.prevCursor, direction: 'backward' }
                 : null,
-        enabled: !!chatId,
+        enabled,
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
         refetchOnMount: false,

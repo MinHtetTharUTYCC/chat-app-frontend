@@ -4,7 +4,7 @@ import { useAuthStore } from '@/hooks/use-auth-store';
 import { ChatItem } from './chat-item';
 import { useAppStore } from '@/hooks/use-app-store';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChatItemResponse } from '@/types/types';
+import { ChatItemResponse } from '@/types/chats';
 import { useEffect, useRef } from 'react';
 
 function ChatItemsList({ chats }: { chats: ChatItemResponse[] }) {
@@ -26,9 +26,9 @@ function ChatItemsList({ chats }: { chats: ChatItemResponse[] }) {
 
     return (
         <>
-            {chats?.map((chat: any) => {
+            {chats?.map((chat) => {
                 const otherParticipants = chat.participants.filter(
-                    (parti: any) => parti.userId !== currentUser?.id
+                    (parti) => parti.userId !== currentUser?.id
                 );
 
                 const isDM = !chat.isGroup && otherParticipants.length === 1;
@@ -49,11 +49,11 @@ function ChatItemsList({ chats }: { chats: ChatItemResponse[] }) {
                         key={chat.id}
                         id={chat.id}
                         displayName={displayName}
-                        lastMessage={lastMessageText}
-                        timestamp={lastMessage?.createdAt}
-                        isActive={pathname.includes(`/chats/${chat.id}`)}
-                        otherParticipants={otherParticipants}
                         isDM={isDM}
+                        lastMsgText={lastMessageText}
+                        isActive={pathname.includes(`/chats/${chat.id}`)}
+                        otherParticipants={otherParticipants.map((p) => p.userId)}
+                        timestamp={lastMessage?.updatedAt}
                         onClick={() => {
                             pendingNavigationRef.current = true;
                             router.push(`/chats/${chat.id}`);

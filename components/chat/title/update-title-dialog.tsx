@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
     Dialog,
     DialogClose,
@@ -12,9 +12,6 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { api } from '@/lib/api';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Edit, Loader2 } from 'lucide-react';
 import { useUpdateTitle } from '@/hooks/chats/mutations/use-update-titlte';
@@ -27,10 +24,6 @@ interface SearchMessageDialogProps {
     setIsOpen: (val: boolean) => void;
     closeSheet: () => void;
 }
-interface UpdateTitleContext {
-    prevChat: any;
-    prevChatsList: any;
-}
 
 function UpdateTitleDialog({
     chatId,
@@ -42,10 +35,7 @@ function UpdateTitleDialog({
 }: SearchMessageDialogProps) {
     const [inputTitle, setInputTitle] = useState(title ?? 'New Group');
 
-    const { mutate: mutateUpdateTitle, isPending: isTitleUpdating } = useUpdateTitle(
-        chatId,
-        setChatTitle
-    );
+    const { mutate: mutateUpdateTitle, isPending: isTitleUpdating } = useUpdateTitle();
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -76,14 +66,23 @@ function UpdateTitleDialog({
                     <Button
                         size="sm"
                         className="cursor-pointer"
-                        onClick={() =>
-                            mutateUpdateTitle({
-                                title: inputTitle,
-                                setChatTitle,
-                                setIsOpen,
-                                closeSheet,
-                            })
-                        }
+                        onClick={() => {
+                            setChatTitle(inputTitle);
+                            setIsOpen(false);
+                            closeSheet();
+
+                            mutateUpdateTitle(
+                                {
+                                    title: inputTitle,
+                                    chatId,
+                                },
+                                {
+                                    onError: () => {
+                                        setInputTitle(title ?? 'New Group');
+                                    },
+                                }
+                            );
+                        }}
                         disabled={isTitleUpdating || title === inputTitle.trim()}
                     >
                         <Loader2

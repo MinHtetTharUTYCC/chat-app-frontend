@@ -3,7 +3,8 @@
 import { chatKeys } from '@/services/chats/chat.keys';
 import { editMessage } from '@/services/messages/message.api';
 import { messageKeys } from '@/services/messages/messages.keys';
-import { EditMessageResponse } from '@/types/types';
+import { EditMessageResponse } from '@/types/actions';
+import { MessageInfiniteData } from '@/types/messages';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -13,7 +14,7 @@ interface EditMessageVars {
 }
 
 interface EditMessageContext {
-    prevMessages: unknown;
+    prevMessages?: MessageInfiniteData;
 }
 
 export const useEditMessage = (chatId: string, setEditOpen: (open: boolean) => void) => {
@@ -27,30 +28,31 @@ export const useEditMessage = (chatId: string, setEditOpen: (open: boolean) => v
             //cancel queries
             await queryClient.cancelQueries({ queryKey: chatMessagesKey });
 
+            //ignore chats list last message (for now)
             //snapshot prev state
-            const prevMessages = queryClient.getQueryData(chatMessagesKey);
+            const prevMessages = queryClient.getQueryData<MessageInfiniteData>(chatMessagesKey);
 
             //update message cache
-            queryClient.setQueryData(chatMessagesKey, (old: any) => {
-                if (!old?.pages) return old;
-
-                return {
-                    ...old,
-                    pages: old.pages.map((page: any) => ({
-                        ...page,
-                        messages: page.messages.map((msg: any) =>
-                            msg.id === messageId
-                                ? {
-                                      ...msg,
-                                      content,
-                                      updatedAt: new Date().toISOString(),
-                                      _optimistic: true,
-                                  }
-                                : msg
-                        ),
-                    })),
-                };
-            });
+            queryClient.setQueryData<MessageInfiniteData>(chatMessagesKey, (old) =>
+                old
+                    ? {
+                          ...old,
+                          pages: old.pages.map((page: any) => ({
+                              ...page,
+                              messages: page.messages.map((msg: any) =>
+                                  msg.id === messageId
+                                      ? {
+                                            ...msg,
+                                            content,
+                                            updatedAt: new Date().toISOString(),
+                                            _optimistic: true,
+                                        }
+                                      : msg
+                              ),
+                          })),
+                      }
+                    : old
+            );
 
             setEditOpen(false);
 
@@ -64,19 +66,21 @@ export const useEditMessage = (chatId: string, setEditOpen: (open: boolean) => v
             }
         },
         onSuccess: (updatedMessage) => {
-            queryClient.setQueryData(chatMessagesKey, (old: any) => {
-                if (!old?.pages) return old;
-
-                return {
-                    ...old,
-                    pages: old.pages.map((page: any) => ({
-                        ...page,
-                        messages: page.messages.map((msg: any) =>
-                            msg.id === updatedMessage.id ? updatedMessage : msg
-                        ),
-                    })),
-                };
-            });
+            queryClient.setQueryData<MessageInfiniteData>(chatMessagesKey, (old) =>
+                old
+                    ? {
+                          ...old,
+                          pages: old.pages.map((page) => ({
+                              ...page,
+                              messages: page.messages.map((msg) =>
+                                  msg.id === updatedMessage.messageId
+                                      ? { ...msg, content: updatedMessage.content }
+                                      : msg
+                              ),
+                          })),
+                      }
+                    : old
+            );
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: chatMessagesKey });
