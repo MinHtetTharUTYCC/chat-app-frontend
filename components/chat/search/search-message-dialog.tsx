@@ -99,7 +99,7 @@ function SarchMessageDialog({ isOpen, setIsOpen, chatId, closeSheet }: SearchMes
                         {!isLoading && messages.length >= 1 && (
                             <div>
                                 <p className="text-center p-4">{messages.length} results found</p>
-                                {messages.reverse().map((msg) => (
+                                {[...messages].reverse().map((msg) => (
                                     <div
                                         key={msg.id}
                                         className={cn(

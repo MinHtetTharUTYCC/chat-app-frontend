@@ -19,7 +19,7 @@ function UserNav() {
             await logout();
             resetAuth();
 
-            toast.success('Logout successfully');
+            toast.success('Logged out successfully');
             router.push('/login');
         } catch (error) {
             const message = 'Logout failed';
@@ -33,7 +33,7 @@ function UserNav() {
     return (
         <div className="w-full flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-                <UserAvatar username={currentUser.username} size={10} />
+                <UserAvatar username={currentUser.username} size={'size-10'} />
                 <p>{currentUser.username}</p>
             </div>
             <DropdownMenu>

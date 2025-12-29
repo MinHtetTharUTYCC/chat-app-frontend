@@ -88,12 +88,11 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                 }
             } else if (bottomRef.current) {
                 // Normal load - scroll to bottom
-                console.log('CALLED: SCRL BTMMMM');
                 bottomRef.current.scrollIntoView({ behavior: 'instant' });
                 hasScrolledToBottomInitiallyRef.current = true;
             }
         }
-    }, [isInMiddle, data?.pages[0]]);
+    }, [isInMiddle, data?.pages?.length]);
 
     useEffect(() => {
         const el = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
@@ -204,6 +203,15 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         );
     }
 
+    if (!socket || isLoadingMessages || isChatLoading) {
+        return (
+            <div className="flex flex-col h-full items-center justify-center text-muted-foreground">
+                <Loader2 className="animate-spin" size={40} strokeWidth={2} />
+                <p>Connecting to chat...</p>
+            </div>
+        );
+    }
+
     // Handle chat not found or forbidden
     if (!chatDetails) {
         return (
@@ -219,15 +227,6 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
             <div className="flex flex-col h-full bg-background">
                 <ChatHeader chatId={chatId} chatDetails={chatDetails} />
                 <GroupChatPreview chatDetails={chatDetails} />
-            </div>
-        );
-    }
-
-    if (!socket || isLoadingMessages || isChatLoading) {
-        return (
-            <div className="flex flex-col h-full items-center justify-center text-muted-foreground">
-                <Loader2 className="animate-spin" size={40} strokeWidth={2} />
-                <p>Connecting to chat...</p>
             </div>
         );
     }

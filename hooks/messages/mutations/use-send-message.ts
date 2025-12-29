@@ -41,7 +41,7 @@ export function useSendMessage(chatId: string) {
             const prevMessages = queryClient.getQueryData<MessageInfiniteData>(chatMessagesKey);
             const prevChatList = queryClient.getQueryData<ChatsListQueryData>(chatListKey);
 
-            //create optismistic essage
+            //create optimistic message
             const tempId = `temp-${Date.now()}-${Math.random()}`;
             const optimisticMessage = {
                 id: tempId,

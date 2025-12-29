@@ -51,9 +51,13 @@ export const unpinMessage = async (chatId: string, messageId: string): Promise<A
     return data;
 };
 
-export const getPinned = async (chatId: string, cursor?: string): Promise<PinnedResponse> => {
+export const getPinned = async (
+    chatId: string,
+    cursor?: string,
+    limit: number = 10
+): Promise<PinnedResponse> => {
     const { data } = await api.get(`/chats/${chatId}/pinned`, {
-        params: { cursor, limit: 10 },
+        params: { cursor, limit },
     });
     return data;
 };

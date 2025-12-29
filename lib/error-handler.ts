@@ -19,5 +19,5 @@ export const getErrorMessage = (error: unknown): string => {
         return error.message;
     }
 
-    return 'An expected error occurred';
+    return 'An unexpected error occurred';
 };

@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Edit, Loader2 } from 'lucide-react';
-import { useUpdateTitle } from '@/hooks/chats/mutations/use-update-titlte';
+import { useUpdateTitle } from '@/hooks/chats/mutations/use-update-title';
 
 interface SearchMessageDialogProps {
     chatId: string;
@@ -44,7 +44,7 @@ function UpdateTitleDialog({
                     <Edit />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-150">
                 <DialogHeader>
                     <DialogTitle>Update Chat Name</DialogTitle>
                     <DialogDescription>Give your group chat a new name</DialogDescription>
@@ -79,6 +79,7 @@ function UpdateTitleDialog({
                                 {
                                     onError: () => {
                                         setInputTitle(title ?? 'New Group');
+                                        setChatTitle(title ?? 'New Group');
                                     },
                                 }
                             );

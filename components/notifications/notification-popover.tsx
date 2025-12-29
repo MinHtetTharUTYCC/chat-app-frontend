@@ -59,7 +59,7 @@ export function NotificationPopover() {
                     )}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-100 p-0" align="start">
+            <PopoverContent className="w-80 p-0" align="start">
                 {isError ? (
                     <div className="flex items-center justify-center gap-2">
                         <p className="text-sm text-muted-foreground">Something went wrong</p>
@@ -80,7 +80,7 @@ export function NotificationPopover() {
                                 <RotateCw className={`${isRefetching && 'animate-spin'}`} />
                             </Button>
                         </div>
-                        <ScrollArea className="h-[400px]">
+                        <ScrollArea className="h-100">
                             <div className="flex flex-col gap-1">
                                 {isRefetching && !isFetchingNextPage && (
                                     <div className="py-2 text-xs text-center text-primary animate-pulse">

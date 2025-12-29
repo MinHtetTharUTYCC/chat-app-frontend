@@ -99,6 +99,9 @@ export const usePinMessage = (chatId: string) => {
             if (context?.prevMessages) {
                 queryClient.setQueryData(chatMessagesKey, context.prevMessages);
             }
+            if (context?.prevPinned) {
+                queryClient.setQueryData(pinnedKey, context.prevPinned);
+            }
         },
 
         onSettled: () => {

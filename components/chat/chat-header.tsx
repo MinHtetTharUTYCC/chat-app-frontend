@@ -48,7 +48,7 @@ function ChatHeader({ chatId, chatDetails }: ChatHeaderProps) {
     }, [isDM, otherParticipants, getPresence, presence]);
 
     const groupOnlineCount = useMemo(() => {
-        if (isDM && otherParticipants.length === 0) return 0;
+        if (isDM) return 0;
 
         return otherParticipants.filter((p) => {
             const presence = getPresence(p.user.id);

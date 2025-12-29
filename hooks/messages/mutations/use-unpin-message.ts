@@ -6,6 +6,7 @@ import { messageKeys, pinnedKeys } from '@/services/messages/messages.keys';
 import { MessageInfiniteData, PinnedInfiniteData } from '@/types/messages';
 import { PinItem } from '@/types/messages';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface UnpinMessageVars {
     messageId: string;
@@ -71,6 +72,7 @@ export const useUnpinMessage = (chatId: string) => {
             return { prevMessages, prevPinned };
         },
         onError: (err, _vars, context) => {
+            toast.error('Failed to unpin message');
             console.error('Failed to unpin message:', err);
 
             if (context?.prevMessages) {

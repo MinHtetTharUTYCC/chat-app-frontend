@@ -32,7 +32,7 @@ export const useUpdateTitle = () => {
                 queryClient.cancelQueries({ queryKey: chatsListKey }),
             ]);
 
-            //snapshop prev values
+            //snapshot prev values
             const prevChat = queryClient.getQueryData<ChatDetailsQueryData>(chatKey);
             const prevChatsList = queryClient.getQueryData<ChatsListQueryData>(chatsListKey);
 

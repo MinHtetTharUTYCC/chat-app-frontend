@@ -24,7 +24,7 @@ export const useLeaveGroup = (chatId: string) => {
             } else {
                 router.push('/chats');
             }
-            toast.success('Leaved group successfully');
+            toast.success('Left group successfully');
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: chatsListKey });

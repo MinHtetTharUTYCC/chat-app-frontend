@@ -9,4 +9,5 @@ export const useChatDetails = (chatId: string) =>
         queryKey: chatKeys.chat(chatId),
         queryFn: () => getChatDetails(chatId),
         staleTime: 1000 * 60 * 5,
+        enabled: !!chatId,
     });

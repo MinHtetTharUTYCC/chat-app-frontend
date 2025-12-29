@@ -83,7 +83,6 @@ export default function ChatSettingsSheet({
         if (isFetchingNextPage) {
             // Store before fetch
             prevScrollHeightRef.current = el.scrollHeight;
-            console.log('Before:', el.scrollHeight);
         } else if (prevScrollHeightRef.current > 0) {
             // Restore after fetch completes
             const heightDiff = el.scrollHeight - prevScrollHeightRef.current;
@@ -211,7 +210,9 @@ export default function ChatSettingsSheet({
                         <Button
                             variant="destructive"
                             className="w-full"
-                            onClick={() => mutateLeaveGroup({ onSuccess: () => setIsOpen(false) })}
+                            onClick={() =>
+                                mutateLeaveGroup({}, { onSuccess: () => setIsOpen(false) })
+                            }
                             disabled={isLeavingGroup}
                         >
                             {isLeavingGroup ? <Loader2 className="animate-spin" /> : <LogOut />}

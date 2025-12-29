@@ -33,7 +33,7 @@ const queryClient = new QueryClient({
     //for actions(POST, PUT, DELETE)
     mutationCache: new MutationCache({
         onError: (error, _variables, _context, mutation) => {
-            //if mutation has it's won onError, skip global one
+            // if mutation has its own onError, skip global one
             if (mutation.options.onError) return;
 
             const msg = getErrorMessage(error);

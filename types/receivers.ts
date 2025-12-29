@@ -18,14 +18,6 @@ export type MessageEditedReceiver = {
         username: string;
     };
 };
-export type MessagePinnedReceiver = {
-    messageId: string;
-    chatId: string;
-    sender: {
-        id: string;
-        username: string;
-    };
-};
 
 export type PinAddedReceiver = {
     chatId: string;
