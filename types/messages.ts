@@ -50,3 +50,5 @@ export type PinnedResponse = {
     };
 };
 export type PinnedInfiniteData = InfiniteData<PinnedResponse>;
+
+export type SearchedMessageItem = Omit<MessageItem, 'isPinned' | 'pinnedByUserId' | '_optimistic'>;

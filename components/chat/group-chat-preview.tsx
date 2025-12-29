@@ -27,9 +27,6 @@ export function GroupChatPreview({ chatDetails }: GroupChatPreviewProps) {
             queryClient.invalidateQueries({ queryKey: ['chat', chatDetails.id] });
             queryClient.invalidateQueries({ queryKey: ['messages', chatDetails.id] });
         },
-        onError: (error: any) => {
-            toast.error(error.message || 'Failed to join group');
-        },
     });
 
     const memberCount = chatDetails.participantsCount || chatDetails.participants?.length || 0;

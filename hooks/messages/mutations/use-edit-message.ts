@@ -37,9 +37,9 @@ export const useEditMessage = (chatId: string, setEditOpen: (open: boolean) => v
                 old
                     ? {
                           ...old,
-                          pages: old.pages.map((page: any) => ({
+                          pages: old.pages.map((page) => ({
                               ...page,
-                              messages: page.messages.map((msg: any) =>
+                              messages: page.messages.map((msg) =>
                                   msg.id === messageId
                                       ? {
                                             ...msg,

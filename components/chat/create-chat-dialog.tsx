@@ -90,7 +90,7 @@ export function CreateChatDialog() {
                         <Plus className="h-5 w-5" />
                     </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px]">
+                <DialogContent className="sm:max-w-150">
                     <DialogHeader>
                         <DialogTitle>New Message</DialogTitle>
                     </DialogHeader>
@@ -108,7 +108,7 @@ export function CreateChatDialog() {
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value.trim())}
                             />
-                            <ScrollArea className="h-[400px] border rounded-md p-2">
+                            <ScrollArea className="h-100 border rounded-md p-2">
                                 {isLoadingSearch && (
                                     <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                                 )}
@@ -159,7 +159,7 @@ export function CreateChatDialog() {
                                 {selectedUsers.length} members
                             </p>
                             {selectedUsers.length > 0 && (
-                                <ScrollArea className="max-h-[100px]">
+                                <ScrollArea className="max-h-25">
                                     <div className="flex gap-2 flex-wrap">
                                         {selectedUsers.map((user) => (
                                             <div
@@ -177,12 +177,12 @@ export function CreateChatDialog() {
                                 </ScrollArea>
                             )}
 
-                            <ScrollArea className="h-[200px] border rounded-md p-2">
+                            <ScrollArea className="h-50 border rounded-md p-2">
                                 {/* Reusing search results for selection */}
                                 {isLoadingSearch && (
                                     <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                                 )}
-                                {usersToShow.map((user: any) => (
+                                {usersToShow.map((user) => (
                                     <div
                                         key={user.id}
                                         className="flex items-center justify-between p-2 hover:bg-accent rounded-md cursor-pointer"

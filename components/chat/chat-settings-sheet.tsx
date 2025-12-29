@@ -65,10 +65,7 @@ export default function ChatSettingsSheet({
         isLoading: isPinnedLoading,
     } = usePinned({ chatId, isSheetOpen: isOpen });
 
-    const { mutate: mutateLeaveGroup, isPending: isLeavingGroup } = useLeaveGroup(
-        chatId,
-        setChatsOpen
-    );
+    const { mutate: mutateLeaveGroup, isPending: isLeavingGroup } = useLeaveGroup(chatId);
 
     const handlePinMsgClick = async (messageId: string) => {
         const params = new URLSearchParams(searchParams);
@@ -214,7 +211,7 @@ export default function ChatSettingsSheet({
                         <Button
                             variant="destructive"
                             className="w-full"
-                            onClick={mutateLeaveGroup}
+                            onClick={() => mutateLeaveGroup({ onSuccess: () => setIsOpen(false) })}
                             disabled={isLeavingGroup}
                         >
                             {isLeavingGroup ? <Loader2 className="animate-spin" /> : <LogOut />}

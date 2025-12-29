@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/form';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { RegisterSchema, RegisterValues } from './validation';
@@ -45,7 +45,7 @@ export function RegisterForm() {
     }
 
     return (
-        <Card className="w-[350px] shadow-lg">
+        <Card className="w-87.5 shadow-lg">
             <CardHeader>
                 <CardTitle>Create an account</CardTitle>
             </CardHeader>
