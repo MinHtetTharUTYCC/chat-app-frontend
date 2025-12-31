@@ -40,3 +40,8 @@ export type ChatDetailsResponse = {
 
 export type ChatsListQueryData = ChatItemResponse[] | undefined;
 export type ChatDetailsQueryData = ChatDetailsResponse | undefined;
+
+export type StartChatResponse = {
+    oldChatExists: boolean;
+    chat: ChatItemResponse;
+};

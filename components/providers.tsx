@@ -20,6 +20,9 @@ import {
     PinAddedReceiver,
     GroupAddedReceiver,
     TitleUpdateReceiver,
+    UserJoinedGroupReceiver,
+    UserLeftGroupReceiver,
+    MembersAddedReceiver,
 } from '@/types/receivers';
 import { chatKeys } from '@/services/chats/chat.keys';
 import { messageKeys, pinnedKeys } from '@/services/messages/messages.keys';
@@ -252,7 +255,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
         const handleGroupAdded = async (newGroup: GroupAddedReceiver) => {
             toast('New Group', {
-                description: `You are added to a new group: ${newGroup.title}`,
+                description: `${newGroup.user.username} added you to ${newGroup.title}`,
                 action: {
                     label: 'View',
                     onClick: () => {
@@ -263,6 +266,54 @@ export function Providers({ children }: { children: React.ReactNode }) {
             });
 
             queryClient.invalidateQueries({ queryKey: chatKeys.all });
+            queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+        };
+
+        const handleUserJoinedGroup = async (group: UserJoinedGroupReceiver) => {
+            if (group.user.id === currentUser.id) return;
+
+            toast('New Member', {
+                description: `${group.user.username} joined ${group.title}`,
+                action: {
+                    label: 'View',
+                    onClick: () => router.push(`/chats/${group.chatId}`),
+                },
+            });
+
+            queryClient.invalidateQueries({ queryKey: chatKeys.chat(group.chatId) });
+            queryClient.invalidateQueries({ queryKey: chatKeys.all });
+        };
+
+        const handleUserLeftGroup = async (group: UserLeftGroupReceiver) => {
+            if (group.user.id === currentUser.id) return;
+
+            toast('Member Left', {
+                description: `${group.user.username} left ${group.title}`,
+                action: {
+                    label: 'View',
+                    onClick: () => router.push(`/chats/${group.chatId}`),
+                },
+            });
+
+            queryClient.invalidateQueries({ queryKey: chatKeys.chat(group.chatId) });
+            queryClient.invalidateQueries({ queryKey: chatKeys.all });
+        };
+
+        const handleMembersAddedToGroup = async (added: MembersAddedReceiver) => {
+            if (added.user.id === currentUser.id) return;
+
+            toast('New Members', {
+                description: `${added.user.username} added ${added.addedMembersCount} ${
+                    added.addedMembersCount > 1 ? ' members' : ' member'
+                } to ${added.title}`,
+                action: {
+                    label: 'View',
+                    onClick: () => router.push(`/chats/${added.chatId}`),
+                },
+            });
+
+            queryClient.invalidateQueries({ queryKey: chatKeys.all });
+            queryClient.invalidateQueries({ queryKey: chatKeys.chat(added.chatId) });
         };
 
         const handleNewChat = async (newChat: NewChatReceiver) => {
@@ -316,6 +367,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         newSocket.on('message_edited', handleEditMessage);
         newSocket.on('new_chat', handleNewChat);
         newSocket.on('group_added', handleGroupAdded);
+        newSocket.on('user_joined_group', handleUserJoinedGroup);
+        newSocket.on('user_left_group', handleUserLeftGroup);
+        newSocket.on('members_added', handleMembersAddedToGroup);
         newSocket.on('pin_added', handlePinAdded);
 
         newSocket.on('disconnect', () => {
@@ -331,6 +385,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
             newSocket.off('message_edited', handleEditMessage);
             newSocket.off('new_chat', handleNewChat);
             newSocket.off('group_added', handleGroupAdded);
+            newSocket.off('user_joined_group', handleUserJoinedGroup);
+            newSocket.off('user_left_group', handleUserLeftGroup);
+            newSocket.off('members_added', handleMembersAddedToGroup);
             newSocket.off('pin_added', handlePinAdded);
             newSocket.off('disconnect');
             newSocket.close();

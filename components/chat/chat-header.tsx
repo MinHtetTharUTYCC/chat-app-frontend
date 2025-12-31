@@ -21,8 +21,6 @@ function ChatHeader({ chatId, chatDetails }: ChatHeaderProps) {
     const { currentUser } = useAuthStore();
     const { setChatsOpen } = useAppStore();
 
-    console.log('type of data', chatDetails.createdAt, typeof chatDetails.createdAt);
-
     const getPresence = usePresenceStore((state) => state.getPresence);
     // to listen at useMemo(presence_update makes changes to 'presence' by calling 'updatePresence')
     const presence = usePresenceStore((state) => state.presence);
@@ -71,8 +69,6 @@ function ChatHeader({ chatId, chatDetails }: ChatHeaderProps) {
             </div>
         );
     }
-
-    console.log('chatDetails in ChatHeader:', chatDetails);
 
     return (
         <div className="flex items-center justify-between p-4 border-b">

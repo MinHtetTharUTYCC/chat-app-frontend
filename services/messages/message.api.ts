@@ -1,6 +1,11 @@
 import { api } from '@/lib/api';
 import { MessageItem, MessagesResponse, PinnedResponse } from '@/types/messages';
-import { EditMessageResponse } from '@/types/actions';
+import {
+    DeleteMessageResponse,
+    EditMessageResponse,
+    PinMessageResponse,
+    UnpinMessageResponse,
+} from '@/types/actions';
 
 export interface MessageQueryParams {
     limit: number;
@@ -32,21 +37,26 @@ export const editMessage = async (
     return data;
 };
 
-export interface ActionResponse {
-    success: boolean;
-}
-
-export const deleteMessage = async (chatId: string, messageId: string): Promise<ActionResponse> => {
+export const deleteMessage = async (
+    chatId: string,
+    messageId: string
+): Promise<DeleteMessageResponse> => {
     const { data } = await api.delete(`/chats/${chatId}/messages/${messageId}`);
     return data;
 };
 
-export const pinMessage = async (chatId: string, messageId: string): Promise<ActionResponse> => {
+export const pinMessage = async (
+    chatId: string,
+    messageId: string
+): Promise<PinMessageResponse> => {
     const { data } = await api.post(`/chats/${chatId}/messages/${messageId}/pin`);
     return data;
 };
 
-export const unpinMessage = async (chatId: string, messageId: string): Promise<ActionResponse> => {
+export const unpinMessage = async (
+    chatId: string,
+    messageId: string
+): Promise<UnpinMessageResponse> => {
     const { data } = await api.delete(`/chats/${chatId}/messages/${messageId}/pin`);
     return data;
 };
@@ -56,6 +66,9 @@ export const getPinned = async (
     cursor?: string,
     limit: number = 10
 ): Promise<PinnedResponse> => {
+    if (limit <= 0) {
+        throw new Error('Limit must be a positive number');
+    }
     const { data } = await api.get(`/chats/${chatId}/pinned`, {
         params: { cursor, limit },
     });

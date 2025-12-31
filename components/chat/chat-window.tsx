@@ -106,13 +106,11 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                 hasScrolledToBottomInitiallyRef.current === true;
 
             if (!isInitialScrollDone) {
-                console.log('Waiting for initial scroll to complete...');
                 return; // Exit early
             }
 
             // Load OLDER messages (scroll upward)
             if (el.scrollTop <= 10 && hasNextPage && !isFetchingNextPage) {
-                console.log('⬆️ Loading older messages...');
                 fetchNextPage();
             }
 
@@ -123,7 +121,6 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                 !isFetchingPreviousPage &&
                 isInMiddle
             ) {
-                console.log('⬇️ Loading newer messages...');
                 fetchPreviousPage();
             }
         };

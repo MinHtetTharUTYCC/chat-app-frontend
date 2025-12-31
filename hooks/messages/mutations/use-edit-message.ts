@@ -17,7 +17,7 @@ interface EditMessageContext {
     prevMessages?: MessageInfiniteData;
 }
 
-export const useEditMessage = (chatId: string, setEditOpen: (open: boolean) => void) => {
+export const useEditMessage = (chatId: string) => {
     const queryClient = useQueryClient();
     const chatMessagesKey = messageKeys.chat(chatId);
     const chatsListKey = chatKeys.all;
@@ -53,8 +53,6 @@ export const useEditMessage = (chatId: string, setEditOpen: (open: boolean) => v
                       }
                     : old
             );
-
-            setEditOpen(false);
 
             return { prevMessages };
         },

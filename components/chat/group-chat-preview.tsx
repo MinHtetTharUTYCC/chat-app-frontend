@@ -2,32 +2,16 @@
 
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Users, Lock, UserPlus } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { Users, UserPlus } from 'lucide-react';
 import { ChatDetailsResponse } from '@/types/chats';
-import { api } from '@/lib/api';
+import { useJoinGroup } from '@/hooks/chats/mutations/use-join-group';
 
 interface GroupChatPreviewProps {
     chatDetails: ChatDetailsResponse;
 }
 
 export function GroupChatPreview({ chatDetails }: GroupChatPreviewProps) {
-    const queryClient = useQueryClient();
-
-    // TODO: Implement join group mutation
-    const joinGroupMutation = useMutation({
-        mutationFn: async () => {
-            const { data } = await api.post(`/chats/${chatDetails.id}/join`);
-            return data;
-        },
-        onSuccess: () => {
-            toast.success('Joined group successfully!');
-            // Invalidate and refetch chat details
-            queryClient.invalidateQueries({ queryKey: ['chat', chatDetails.id] });
-            queryClient.invalidateQueries({ queryKey: ['messages', chatDetails.id] });
-        },
-    });
+    const { mutate: mutateJoinGroup, isPending: isJoiningGroup } = useJoinGroup(chatDetails.id);
 
     const memberCount = chatDetails.participantsCount || chatDetails.participants?.length || 0;
 
@@ -89,11 +73,11 @@ export function GroupChatPreview({ chatDetails }: GroupChatPreviewProps) {
                 <Button
                     size="lg"
                     className="w-full gap-2"
-                    onClick={() => joinGroupMutation.mutate()}
-                    disabled={joinGroupMutation.isPending}
+                    onClick={mutateJoinGroup}
+                    disabled={isJoiningGroup}
                 >
                     <UserPlus className="h-5 w-5" />
-                    {joinGroupMutation.isPending ? 'Joining...' : 'Join Group'}
+                    {isJoiningGroup ? 'Joining...' : 'Join Group'}
                 </Button>
 
                 <p className="text-xs text-muted-foreground">

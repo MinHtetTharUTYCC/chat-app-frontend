@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuthStore } from '@/hooks/use-auth-store';
+import { getErrorMessage } from '@/lib/error-handler';
 import { ActionResponse, unpinMessage } from '@/services/messages/message.api';
 import { messageKeys, pinnedKeys } from '@/services/messages/messages.keys';
 import { MessageInfiniteData, PinnedInfiniteData } from '@/types/messages';
@@ -72,7 +73,9 @@ export const useUnpinMessage = (chatId: string) => {
             return { prevMessages, prevPinned };
         },
         onError: (err, _vars, context) => {
-            toast.error('Failed to unpin message');
+            const msg = getErrorMessage(err);
+            toast.error(msg);
+
             console.error('Failed to unpin message:', err);
 
             if (context?.prevMessages) {

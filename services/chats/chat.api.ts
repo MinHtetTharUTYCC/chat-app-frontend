@@ -1,10 +1,8 @@
 import { api } from '@/lib/api';
-import { LeaveGroupResponse, UpdateTitleResponse } from '@/types/actions';
-import { ChatDetailsResponse, ChatItemResponse } from '@/types/chats';
+import { JoinGroupResponse, LeaveGroupResponse, UpdateTitleResponse } from '@/types/actions';
+import { ChatDetailsResponse, ChatItemResponse, StartChatResponse } from '@/types/chats';
 
-export const startChat = async (
-    otherUserId: string
-): Promise<{ oldChatExists: boolean; chat: ChatItemResponse | { id: string } }> => {
+export const startChat = async (otherUserId: string): Promise<StartChatResponse> => {
     const { data } = await api.post('/chats/start', {
         otherUserId,
     });
@@ -35,5 +33,9 @@ export const updateTitle = async (chatId: string, title: string): Promise<Update
 };
 export const leaveGroup = async (chatId: string): Promise<LeaveGroupResponse> => {
     const { data } = await api.delete(`/chats/${chatId}/participants/leave-group`);
+    return data;
+};
+export const joinGroup = async (chatId: string): Promise<JoinGroupResponse> => {
+    const { data } = await api.post(`/chats/${chatId}/participants/join-group`);
     return data;
 };

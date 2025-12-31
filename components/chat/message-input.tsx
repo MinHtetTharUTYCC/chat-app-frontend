@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { use, useCallback, useEffect, useRef, useState } from 'react';
 import { Input } from '../ui/input';
 import { useSendMessage } from '@/hooks/messages/mutations/use-send-message';
 import { Button } from '../ui/button';
@@ -66,6 +66,14 @@ function MessageInput({ chatId }: MessageInputProps) {
         mutateSendMessage({ content: msgToSend });
     };
 
+    const handleKeyDown = useCallback(() => {
+        if (!isTyping && socket) {
+            socket.emit('typing', { chatId, isTyping: true });
+            setIsTyping(true);
+        }
+        debouncedStop.current();
+    }, [isTyping, socket, chatId]);
+
     useEffect(() => {
         return () => {
             cancelDebounce.current();
@@ -90,13 +98,7 @@ function MessageInput({ chatId }: MessageInputProps) {
                     placeholder="Type a message..."
                     className="flex-1"
                     disabled={isSendingMessage}
-                    onKeyDown={() => {
-                        if (!isTyping) {
-                            socket.emit('typing', { chatId, isTyping: true });
-                            setIsTyping(true);
-                        }
-                        debouncedStop.current();
-                    }}
+                    onKeyDown={handleKeyDown}
                 />
                 <Button type="submit" disabled={isSendingMessage || !input.trim()}>
                     {isSendingMessage ? (

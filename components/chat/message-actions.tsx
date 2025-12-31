@@ -45,7 +45,7 @@ export function MessageActions({
     const [editContent, setEditContent] = useState(currentContent);
 
     // edit
-    const { mutate: mutateEdit, isPending: isPendingEdit } = useEditMessage(chatId, setEditOpen);
+    const { mutate: mutateEdit, isPending: isPendingEdit } = useEditMessage(chatId);
     // delete
     const { mutate: mutateDeleteMessage, isPending: isPendingDelete } = useDeleteMessage(chatId);
     // pin
@@ -113,7 +113,10 @@ export function MessageActions({
                     <Input value={editContent} onChange={(e) => setEditContent(e.target.value)} />
                     <DialogFooter>
                         <Button
-                            onClick={() => mutateEdit({ messageId, content: editContent })}
+                            onClick={() => {
+                                setEditOpen(false);
+                                mutateEdit({ messageId, content: editContent });
+                            }}
                             disabled={isPendingEdit}
                         >
                             Save
