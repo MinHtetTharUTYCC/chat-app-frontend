@@ -21,7 +21,10 @@ const NotiItem = memo(
                 content = `${actor.username} started a new chat with you.`;
                 break;
             case 'GROUP_ADDED':
-                content = `${actor.username} added you to a group${
+                content = `${actor.username} added you to${chat.title ? `: ${chat.title}.` : '.'}`;
+                break;
+            case 'GROUP_INVITED':
+                content = `${actor.username} invited you to join${
                     chat.title ? `: ${chat.title}.` : '.'
                 }`;
                 break;
@@ -29,6 +32,8 @@ const NotiItem = memo(
                 content = `${actor.username} pinned your message${
                     chat.title ? ` in ${chat.title}.` : '.'
                 }`;
+                break;
+            default:
                 break;
         }
 

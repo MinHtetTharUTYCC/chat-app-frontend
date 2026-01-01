@@ -13,7 +13,7 @@ export type NotificationItem = {
         id: string;
         title: string | null;
     };
-    type: 'NEW_CHAT' | 'GROUP_ADDED' | 'MESSAGE_PINNED';
+    type: 'NEW_CHAT' | 'GROUP_ADDED' | 'GROUP_INVITED' | 'MESSAGE_PINNED';
     data?: Record<string, any>;
     isRead: boolean;
     createdAt: string;

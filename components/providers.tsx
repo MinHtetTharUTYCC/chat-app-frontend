@@ -23,6 +23,7 @@ import {
     UserJoinedGroupReceiver,
     UserLeftGroupReceiver,
     MembersAddedReceiver,
+    GroupInvitedReceiver,
 } from '@/types/receivers';
 import { chatKeys } from '@/services/chats/chat.keys';
 import { messageKeys, pinnedKeys } from '@/services/messages/messages.keys';
@@ -269,6 +270,21 @@ export function Providers({ children }: { children: React.ReactNode }) {
             queryClient.invalidateQueries({ queryKey: notificationKeys.all });
         };
 
+        const handleGroupInvited = async (newGroup: GroupInvitedReceiver) => {
+            toast('Group Invited', {
+                description: `${newGroup.user.username} invited you to join ${newGroup.title}`,
+                action: {
+                    label: 'View',
+                    onClick: () => {
+                        setChatsOpen(false);
+                        router.push(`/chats/${newGroup.chatId}`);
+                    },
+                },
+            });
+
+            queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+        };
+
         const handleUserJoinedGroup = async (group: UserJoinedGroupReceiver) => {
             if (group.user.id === currentUser.id) return;
 
@@ -367,6 +383,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         newSocket.on('message_edited', handleEditMessage);
         newSocket.on('new_chat', handleNewChat);
         newSocket.on('group_added', handleGroupAdded);
+        newSocket.on('group_invited', handleGroupInvited);
         newSocket.on('user_joined_group', handleUserJoinedGroup);
         newSocket.on('user_left_group', handleUserLeftGroup);
         newSocket.on('members_added', handleMembersAddedToGroup);
@@ -385,6 +402,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             newSocket.off('message_edited', handleEditMessage);
             newSocket.off('new_chat', handleNewChat);
             newSocket.off('group_added', handleGroupAdded);
+            newSocket.off('group_invited', handleGroupInvited);
             newSocket.off('user_joined_group', handleUserJoinedGroup);
             newSocket.off('user_left_group', handleUserLeftGroup);
             newSocket.off('members_added', handleMembersAddedToGroup);

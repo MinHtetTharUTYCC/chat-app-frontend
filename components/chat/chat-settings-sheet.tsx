@@ -21,6 +21,8 @@ import { PinItem } from '@/types/messages';
 import { useLeaveGroup } from '@/hooks/chats/mutations/use-leave-group';
 import { UserParticipant } from '@/types/chats';
 import { usePinned } from '@/hooks/messages/queries/use-pinned';
+import { InviteUserDialog } from '../dialogs/invite-users-dialog';
+import { AddMembersDialog } from '../dialogs/add-members-dialog';
 
 interface ChatSettingsSheetProps {
     chatId: string;
@@ -211,7 +213,15 @@ export default function ChatSettingsSheet({
                             variant="destructive"
                             className="w-full"
                             onClick={() =>
-                                mutateLeaveGroup({}, { onSuccess: () => setIsOpen(false) })
+                                mutateLeaveGroup(
+                                    {},
+                                    {
+                                        onSuccess: () => {
+                                            setIsOpen(false);
+                                            setChatsOpen(true);
+                                        },
+                                    }
+                                )
                             }
                             disabled={isLeavingGroup}
                         >
@@ -305,6 +315,10 @@ export default function ChatSettingsSheet({
                             >
                                 {participants.length > 0 && (
                                     <ScrollArea className="h-full mb-10">
+                                        <div className="flex items-center justify-around gap-2">
+                                            <AddMembersDialog chatId={chatId} />
+                                            <InviteUserDialog chatId={chatId} />
+                                        </div>
                                         {participants.map((parti) => {
                                             const presData = getPresence(parti.user.id);
 

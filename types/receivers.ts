@@ -6,6 +6,7 @@ export type GroupAddedReceiver = {
         username: string;
     };
 };
+export type GroupInvitedReceiver = GroupAddedReceiver;
 export type UserJoinedGroupReceiver = GroupAddedReceiver;
 export type UserLeftGroupReceiver = GroupAddedReceiver;
 export type MembersAddedReceiver = GroupAddedReceiver & { addedMembersCount: number };
