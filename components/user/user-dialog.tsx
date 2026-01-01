@@ -33,7 +33,7 @@ function UserDialog({ user, isOpen, setIsOpen, onDone }: UserDialogProps) {
                             mutateStartChat(undefined, {
                                 onSuccess: () => {
                                     setIsOpen(false);
-                                    onDone;
+                                    onDone();
                                 },
                             });
                         }}

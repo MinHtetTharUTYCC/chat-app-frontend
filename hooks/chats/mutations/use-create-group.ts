@@ -20,7 +20,7 @@ export const useCreateGroup = () => {
         mutationFn: ({ groupTitle, userIds }) => createGroup(groupTitle, userIds),
         onSuccess: (newChat) => {
             queryClient.setQueryData<ChatsListQueryData>(chatKeys.all, (old) =>
-                old ? [newChat, ...old] : old
+                old ? [newChat, ...old] : [newChat]
             );
 
             toast.success('Group created');

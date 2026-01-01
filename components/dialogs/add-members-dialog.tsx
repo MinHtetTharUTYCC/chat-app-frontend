@@ -19,12 +19,11 @@ export function AddMembersDialog({ chatId }: { chatId: string }) {
 
     const toggleUser = (user: User) => {
         setSelectedUsers((prev) =>
-            prev.find((u) => u.id == user.id)
+            prev.find((u) => u.id === user.id)
                 ? prev.filter((u) => u.id !== user.id)
                 : [...prev, user]
         );
     };
-
     useEffect(() => {
         if (!open) {
             setSelectedUsers([]);

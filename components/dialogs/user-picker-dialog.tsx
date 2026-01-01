@@ -59,7 +59,6 @@ function UserPickerDialog({
                         value={search}
                         onChange={(e) => onSearchChange(e.target.value)}
                     />
-
                     <p className="text-sm text-muted-foreground">{selectedUsers.length} selected</p>
                     {selectedUsers.length > 0 && (
                         <ScrollArea className="max-h-25">
@@ -77,30 +76,40 @@ function UserPickerDialog({
                             </div>
                         </ScrollArea>
                     )}
-
                     <ScrollArea className="h-56 border rounded-md p-2">
-                        {isLoading && <Loader2 className="h-4 w-4 animate-spin mx-auto" />}
-                        {users.map((user) => {
-                            const isSelected = selectedUsers.some((u) => u.id === user.id);
-                            return (
-                                <div
-                                    key={user.id}
-                                    className="flex items-center justify-between p-2 hover:bg-accent rounded-md cursor-pointer"
-                                    onClick={() => onToggleUser(user)}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <UserAvatar username={user.username} size="size-8" />
-                                        <span className="flex-1 text-sm font-medium truncate">
-                                            {user.username}
-                                        </span>
+                        {isLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                        ) : (
+                            users.map((user) => {
+                                const isSelected = selectedUsers.some((u) => u.id === user.id);
+                                return (
+                                    <div
+                                        key={user.id}
+                                        className="flex items-center justify-between p-2 hover:bg-accent rounded-md cursor-pointer"
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => onToggleUser(user)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                onToggleUser(user);
+                                            }
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <UserAvatar username={user.username} size="size-8" />
+                                            <span className="flex-1 text-sm font-medium truncate">
+                                                {user.username}
+                                            </span>
+                                        </div>
+                                        {isSelected && (
+                                            <Check className="shrink-0 h-4 w-4 text-green-500" />
+                                        )}
                                     </div>
-                                    {isSelected && (
-                                        <Check className="shrink-0 h-4 w-4 text-green-500" />
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </ScrollArea>
+                                );
+                            })
+                        )}
+                    </ScrollArea>{' '}
                     <Button
                         className={`w-full ${isLoading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                         disabled={isConfirming || selectedUsers.length === 0}

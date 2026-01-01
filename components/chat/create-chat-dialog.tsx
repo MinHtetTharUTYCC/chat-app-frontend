@@ -11,13 +11,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Loader2, Check, X, UsersRound } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
 import UserDialog from '../user/user-dialog';
 import { useCreateGroup } from '@/hooks/chats/mutations/use-create-group';
-import { useUsers } from '@/hooks/users/queries/use-users';
 import { User } from '@/types/users';
 import { useSearchUsers } from '@/hooks/users/queries/use-search-users';
 import UserAvatar from '../user/user-avatar';
@@ -31,8 +28,7 @@ export function CreateChatDialog() {
     const [clickedDMUser, setClickedDMUser] = useState<User | null>(null);
     const [isUserOpen, setIsUserOpen] = useState(false);
 
-    const { data: searchedUsers, isLoading: isLoadingSearch } = useSearchUsers(search);
-    const { data: allUsers, isLoading: isLoadingAll } = useUsers(open);
+    const { data: searchedUsers = [], isLoading: isLoadingSearch } = useSearchUsers(search, open);
 
     const { mutate: mutateCreateGroup, isPending: isCreatingGroup } = useCreateGroup();
 
@@ -44,17 +40,9 @@ export function CreateChatDialog() {
         );
     };
 
-    const usersToShow = search
-        ? !isLoadingSearch
-            ? searchedUsers ?? []
-            : []
-        : !isLoadingAll
-        ? allUsers ?? []
-        : [];
-
     useEffect(() => {
         setClickedDMUser(null);
-    }, [open, setOpen]);
+    }, [open, setClickedDMUser]);
 
     return (
         <>
@@ -66,7 +54,7 @@ export function CreateChatDialog() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-150">
                     <DialogHeader>
-                        <DialogTitle>New Message</DialogTitle>
+                        <DialogTitle>Start Chat</DialogTitle>
                     </DialogHeader>
 
                     <Tabs defaultValue="dm" className="w-full">
@@ -80,13 +68,13 @@ export function CreateChatDialog() {
                             <Input
                                 placeholder="Search users..."
                                 value={search}
-                                onChange={(e) => setSearch(e.target.value.trim())}
-                            />
+                                onChange={(e) => setSearch(e.target.value)}
+                            />{' '}
                             <ScrollArea className="h-100 border rounded-md p-2">
                                 {isLoadingSearch && (
                                     <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                                 )}
-                                {usersToShow.map((user) => (
+                                {searchedUsers.map((user) => (
                                     <div
                                         key={user.id}
                                         className={`flex items-center gap-3 p-2 hover:bg-accent rounded-md cursor-pointer`}
@@ -146,37 +134,32 @@ export function CreateChatDialog() {
 
                             <ScrollArea className="h-50 border rounded-md p-2">
                                 {/* Reusing search results for selection */}
-                                {isLoadingSearch && (
+                                {isLoadingSearch ? (
                                     <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                                )}
-                                {usersToShow.map((user) => (
-                                    <div
-                                        key={user.id}
-                                        className="flex items-center justify-between p-2 hover:bg-accent rounded-md cursor-pointer"
-                                        onClick={() =>
-                                            toggleUser({ id: user.id, username: user.username })
-                                        }
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <Avatar className="h-8 w-8 bg-secondary cursor-pointer">
-                                                <AvatarImage src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" />
-                                                <AvatarFallback className="w-full flex items-center justify-center">
-                                                    <p className="text-center text-xs">
-                                                        {user.username
-                                                            .substring(0, 2)
-                                                            .toUpperCase()}
-                                                    </p>
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <span className="flex-1 text-sm font-medium truncate">
-                                                {user.username}
-                                            </span>
+                                ) : (
+                                    searchedUsers.map((user) => (
+                                        <div
+                                            key={user.id}
+                                            className="flex items-center justify-between p-2 hover:bg-accent rounded-md cursor-pointer"
+                                            onClick={() =>
+                                                toggleUser({ id: user.id, username: user.username })
+                                            }
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <UserAvatar
+                                                    username={user.username}
+                                                    size="size-8"
+                                                />
+                                                <span className="flex-1 text-sm font-medium truncate">
+                                                    {user.username}
+                                                </span>
+                                            </div>
+                                            {selectedUsers.find((u) => u.id == user.id) && (
+                                                <Check className="shrink-0 h-4 w-4 text-green-500" />
+                                            )}
                                         </div>
-                                        {selectedUsers.find((u) => u.id == user.id) && (
-                                            <Check className="shrink-0 h-4 w-4 text-green-500" />
-                                        )}
-                                    </div>
-                                ))}
+                                    ))
+                                )}
                             </ScrollArea>
                             <Button
                                 className={`w-full ${
@@ -186,7 +169,7 @@ export function CreateChatDialog() {
                                 onClick={() =>
                                     mutateCreateGroup(
                                         {
-                                            groupTitle: groupTitle,
+                                            groupTitle: groupTitle.trim(),
                                             userIds: selectedUsers.map((u) => u.id),
                                         },
                                         {

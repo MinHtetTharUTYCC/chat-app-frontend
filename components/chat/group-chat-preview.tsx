@@ -37,38 +37,6 @@ export function GroupChatPreview({ chatDetails }: GroupChatPreviewProps) {
                     </p>
                 </div>
 
-                {/* Preview Members */}
-                {chatDetails.participants && chatDetails.participants.length > 0 && (
-                    <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">Members</p>
-                        <div className="flex flex-wrap justify-center gap-2">
-                            {chatDetails.participants.slice(0, 5).map((participant) => (
-                                <div
-                                    key={participant.user.id}
-                                    className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-full"
-                                >
-                                    <Avatar className="h-6 w-6">
-                                        <AvatarImage src="" />
-                                        <AvatarFallback className="text-xs">
-                                            {participant.user.username
-                                                .substring(0, 2)
-                                                .toUpperCase()}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-sm">{participant.user.username}</span>
-                                </div>
-                            ))}
-                            {chatDetails.participants.length > 5 && (
-                                <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-full">
-                                    <span className="text-sm text-muted-foreground">
-                                        +{chatDetails.participants.length - 5} more
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
                 {/* Join Button */}
                 <Button
                     size="lg"

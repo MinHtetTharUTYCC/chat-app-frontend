@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Input } from '../ui/input';
 import { useSendMessage } from '@/hooks/messages/mutations/use-send-message';
 import { Button } from '../ui/button';

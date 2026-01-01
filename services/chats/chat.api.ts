@@ -1,6 +1,6 @@
 import { api } from '@/lib/api';
 import {
-    ActionRespone,
+    ActionResponse,
     JoinGroupResponse,
     LeaveGroupResponse,
     UpdateTitleResponse,
@@ -51,15 +51,15 @@ export const searchUsersToInviteOrAdd = async (
     chatId: string,
     q: string
 ): Promise<UsersResponse> => {
-    const { data } = await api.get(`/chats/${chatId}/invite-users?q=${q}`);
+    const { data } = await api.get(`/chats/${chatId}/invite-users`, { params: { q } });
     return data;
 };
 
-export const inviteUsers = async (chatId: string, userIds: string[]): Promise<ActionRespone> => {
+export const inviteUsers = async (chatId: string, userIds: string[]): Promise<ActionResponse> => {
     const { data } = await api.post(`/chats/${chatId}/participants/invite`, { userIds });
     return data;
 };
-export const addMembers = async (chatId: string, userIds: string[]): Promise<ActionRespone> => {
+export const addMembers = async (chatId: string, userIds: string[]): Promise<ActionResponse> => {
     const { data } = await api.post(`/chats/${chatId}/participants`, { userIds });
     return data;
 };

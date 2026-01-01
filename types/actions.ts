@@ -21,6 +21,6 @@ export type PinMessageResponse = BaseMessageResponse;
 export type UnpinMessageResponse = PinMessageResponse;
 export type DeleteMessageResponse = BaseMessageResponse;
 
-export type ActionRespone = {
+export type ActionResponse = {
     success: true;
 };
