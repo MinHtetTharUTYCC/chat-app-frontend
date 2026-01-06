@@ -14,6 +14,7 @@ import { usePresenceStore } from '@/hooks/use-presence-store';
 import ChatItemsList from './chat-items-list';
 import { useChats } from '@/hooks/chats';
 import { useAllPresense } from '@/hooks/presence/queries/use-all-presence';
+import Link from 'next/link';
 
 export function ChatSidebar() {
     const pathname = usePathname();
@@ -58,7 +59,9 @@ export function ChatSidebar() {
             {/* Header */}
             <div className="p-4 border-b space-y-4">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold">Messages</h2>
+                    <Link href={'/'} className="text-xl font-bold">
+                        Messages
+                    </Link>
                     <div className="flex gap-1">
                         <NotificationPopover />
                         <CreateChatDialog />

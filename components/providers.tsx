@@ -71,6 +71,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
     // 1. Load user ONCE on page load
     useEffect(() => {
+        if (!accessToken) return;
+
         async function loadUser() {
             try {
                 const res = await api.get('/users/me');
@@ -79,7 +81,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         }
 
         loadUser();
-    }, [setCurrentUser]);
+    }, [accessToken, setCurrentUser]);
 
     // 2. Connect socket only AFTER user exists
     useEffect(() => {

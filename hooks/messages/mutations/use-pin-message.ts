@@ -3,7 +3,7 @@
 import { useAuthStore } from '@/hooks/use-auth-store';
 import { pinMessage } from '@/services/messages/message.api';
 import { messageKeys, pinnedKeys } from '@/services/messages/messages.keys';
-import { ActionResponse, BaseMessageResponse } from '@/types/actions';
+import { BaseMessageResponse } from '@/types/actions';
 import { MessageInfiniteData, PinnedInfiniteData } from '@/types/messages';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -107,4 +107,7 @@ export const usePinMessage = (chatId: string) => {
 
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: chatMessagesKey });
-            queryClient.in$œ’m…Îmo“LÒDüÜ;˜%gÏ?wêÁÅ·øîùovH0õÉa‡5£Ú*î Ø’ÃÌlÍ››S iyä”rÕO7ª“
+            queryClient.invalidateQueries({ queryKey: pinnedKey });
+        },
+    });
+};

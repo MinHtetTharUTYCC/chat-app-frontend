@@ -46,11 +46,6 @@ api.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        // if user already logged out
-        if (!useAuthStore.getState().accessToken) {
-            return Promise.reject(error);
-        }
-
         originalRequest._retry = true;
 
         // one refresh only
