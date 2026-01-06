@@ -22,7 +22,6 @@ export type NotificationItem = {
 export type NotiResponse = {
     data: NotificationItem[];
     meta: {
-        hasMore: boolean;
         nextCursor: string | null;
     };
 };

@@ -1,8 +1,9 @@
 'use client';
 
 import { useAuthStore } from '@/hooks/use-auth-store';
-import { ActionResponse, pinMessage } from '@/services/messages/message.api';
+import { pinMessage } from '@/services/messages/message.api';
 import { messageKeys, pinnedKeys } from '@/services/messages/messages.keys';
+import { ActionResponse, BaseMessageResponse } from '@/types/actions';
 import { MessageInfiniteData, PinnedInfiniteData } from '@/types/messages';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -25,7 +26,7 @@ export const usePinMessage = (chatId: string) => {
     const chatMessagesKey = messageKeys.chat(chatId);
     const pinnedKey = pinnedKeys.chat(chatId);
 
-    return useMutation<ActionResponse, Error, PinMessageVars, PinMessageContext>({
+    return useMutation<BaseMessageResponse, Error, PinMessageVars, PinMessageContext>({
         mutationFn: ({ messageId }) => pinMessage(chatId, messageId),
         onMutate: async ({ messageId, content, msgSenderId }) => {
             if (!currentUser) throw new Error('You need to authenticate first');
@@ -106,7 +107,4 @@ export const usePinMessage = (chatId: string) => {
 
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: chatMessagesKey });
-            queryClient.invalidateQueries({ queryKey: pinnedKey });
-        },
-    });
-};
+            queryClient.in$œ’m…Îmo“LÒDüÜ;˜%gÏ?wêÁÅ·øîùovH0õÉa‡5£Ú*î Ø’ÃÌlÍ››S iyä”rÕO7ª“

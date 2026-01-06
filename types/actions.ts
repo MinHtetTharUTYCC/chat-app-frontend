@@ -10,7 +10,7 @@ export type LeaveGroupResponse = {
 export type JoinGroupResponse = LeaveGroupResponse;
 
 //messages
-type BaseMessageResponse = {
+export type BaseMessageResponse = {
     messageId: string;
     chatId: string;
 };

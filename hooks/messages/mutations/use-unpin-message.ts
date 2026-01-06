@@ -2,8 +2,9 @@
 
 import { useAuthStore } from '@/hooks/use-auth-store';
 import { getErrorMessage } from '@/lib/error-handler';
-import { ActionResponse, unpinMessage } from '@/services/messages/message.api';
+import { unpinMessage } from '@/services/messages/message.api';
 import { messageKeys, pinnedKeys } from '@/services/messages/messages.keys';
+import { BaseMessageResponse } from '@/types/actions';
 import { MessageInfiniteData, PinnedInfiniteData } from '@/types/messages';
 import { PinItem } from '@/types/messages';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -25,7 +26,7 @@ export const useUnpinMessage = (chatId: string) => {
     const chatMessagesKey = messageKeys.chat(chatId);
     const pinnedKey = pinnedKeys.chat(chatId);
 
-    return useMutation<ActionResponse, Error, UnpinMessageVars, UnpinMessageContext>({
+    return useMutation<BaseMessageResponse, Error, UnpinMessageVars, UnpinMessageContext>({
         mutationFn: ({ messageId }) => unpinMessage(chatId, messageId),
         onMutate: async ({ messageId }) => {
             if (!currentUser) throw new Error('You need to authenticate first');

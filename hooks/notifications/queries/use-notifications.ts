@@ -7,10 +7,7 @@ export function useNotifications() {
         queryKey: notificationKeys.all,
         queryFn: ({ pageParam }) => getNotifications(pageParam),
         initialPageParam: undefined as string | undefined,
-        getNextPageParam: (lastPage) =>
-            lastPage.meta.hasMore && lastPage.meta.nextCursor
-                ? lastPage.meta.nextCursor
-                : undefined,
+        getNextPageParam: (lastPage) => lastPage.meta.nextCursor ?? undefined,
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
         refetchOnMount: false,

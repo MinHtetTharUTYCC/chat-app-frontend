@@ -14,9 +14,7 @@ export const usePinned = ({ chatId, isSheetOpen }: UsePinnedOptions) => {
         queryKey: pinnedKeys.chat(chatId),
         queryFn: async ({ pageParam }) => getPinned(chatId, pageParam),
         initialPageParam: undefined as string | undefined,
-        getNextPageParam: (lastPage) => {
-            return lastPage.meta.hasMore ? lastPage.meta.nextCursor : undefined;
-        },
+        getNextPageParam: (lastPage) => lastPage.meta.nextCursor ?? undefined,
         enabled: !!chatId && isSheetOpen,
 
         // ✅ Keep data fresh for 5 minutes

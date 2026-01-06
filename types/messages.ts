@@ -20,8 +20,6 @@ export type MessagesResponse = {
     meta: {
         nextCursor?: string | null;
         prevCursor?: string | null;
-        hasNextPage: boolean;
-        hasPreviousPage: boolean;
     };
 };
 export type MessageInfiniteData = InfiniteData<MessagesResponse>;
@@ -46,7 +44,6 @@ export type PinnedResponse = {
     pinnedMessages: PinItem[];
     meta: {
         nextCursor?: string | null;
-        hasMore: boolean;
     };
 };
 export type PinnedInfiniteData = InfiniteData<PinnedResponse>;
