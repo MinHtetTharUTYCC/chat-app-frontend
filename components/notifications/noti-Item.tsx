@@ -33,6 +33,11 @@ const NotiItem = memo(
                     chat.title ? ` in ${chat.title}.` : '.'
                 }`;
                 break;
+            case 'TITLE_UPDATED':
+                content = `${actor.username} ${chat.title ? 'changed' : 'removed'} group title ${
+                    chat.title
+                }`;
+                break;
             default:
                 break;
         }

@@ -82,8 +82,6 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                                 hasScrolledToMiddleRef.current = true;
                             }
                         });
-                    } else if (date) {
-                        //TODO: handle date scroll
                     }
                 }
             } else if (bottomRef.current) {
@@ -92,7 +90,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                 hasScrolledToBottomInitiallyRef.current = true;
             }
         }
-    }, [isInMiddle, data?.pages?.length]);
+    }, [isInMiddle, data, messageId]);
 
     useEffect(() => {
         const el = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
@@ -136,6 +134,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         isFetchingPreviousPage,
         hasScrolledToBottomInitiallyRef,
         hasScrolledToMiddleRef,
+        isInMiddle,
     ]);
 
     useEffect(() => {
@@ -176,6 +175,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         prevScrollHeightRef.current = 0;
         prevScrollTopRef.current = 0;
     }, [messageId]);
+
     useEffect(() => {
         hasScrolledToBottomInitiallyRef.current = false;
         hasScrolledToMiddleRef.current = false;
@@ -190,7 +190,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         });
 
         return flattened;
-    }, [data?.pages]);
+    }, [data]);
 
     if (!chatId) {
         return (
@@ -213,7 +213,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
     if (!chatDetails) {
         return (
             <div className="flex-1 flex items-center justify-center bg-background text-muted-foreground">
-                <p>Chat not found or you don't have access</p>
+                <p>Chat not found or you don&apos;t have access</p>
             </div>
         );
     }

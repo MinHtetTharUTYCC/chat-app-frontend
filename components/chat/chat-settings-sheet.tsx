@@ -45,7 +45,7 @@ export default function ChatSettingsSheet({
     const router = useRouter();
 
     const { setChatsOpen } = useAppStore();
-    const { getPresence } = usePresenceStore();
+    const getPresence = usePresenceStore((state) => state.getPresence);
     const { currentUser } = useAuthStore();
 
     const [chatName, setChatName] = useState(dmParticipantname || title || 'Chat Info');
@@ -93,13 +93,6 @@ export default function ChatSettingsSheet({
         }
     }, [isFetchingNextPage]);
 
-    // Reset scroll state when sheet closes
-    useEffect(() => {
-        if (!isOpen) {
-            setHasScrolled(false);
-        }
-    }, [isOpen]);
-
     // Scroll when data is loaded and sheet is open
     useEffect(() => {
         if (isOpen && pinned?.pages[0] && !hasScrolled) {
@@ -114,7 +107,7 @@ export default function ChatSettingsSheet({
                 }
             }, 100); // Longer delay for reliability
         }
-    }, [isOpen, chatId, pinned?.pages[0], hasScrolled]);
+    }, [isOpen, chatId, pinned, hasScrolled]);
 
     //auto-load infinite scroll
     useEffect(() => {
@@ -158,7 +151,15 @@ export default function ChatSettingsSheet({
             .reverse() || [];
 
     return (
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <Sheet
+            open={isOpen}
+            onOpenChange={(val) => {
+                setIsOpen(val);
+                if (!val) {
+                    setHasScrolled(false);
+                }
+            }}
+        >
             <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="cursor-pointer">
                     <MoreVertical className="h-4 w-4" />
@@ -213,15 +214,12 @@ export default function ChatSettingsSheet({
                             variant="destructive"
                             className="w-full"
                             onClick={() =>
-                                mutateLeaveGroup(
-                                    {},
-                                    {
-                                        onSuccess: () => {
-                                            setIsOpen(false);
-                                            setChatsOpen(true);
-                                        },
-                                    }
-                                )
+                                mutateLeaveGroup(undefined, {
+                                    onSuccess: () => {
+                                        setIsOpen(false);
+                                        setChatsOpen(true);
+                                    },
+                                })
                             }
                             disabled={isLeavingGroup}
                         >

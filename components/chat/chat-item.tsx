@@ -3,11 +3,9 @@
 import { usePresenceStore } from '@/hooks/use-presence-store';
 import { getLastSeenToday } from '@/lib/chat/last-seen-today';
 import { cn, formatMessageDate } from '@/lib/utils';
-import { useMemo } from 'react';
 import UserAvatar from '../user/user-avatar';
 
 interface ChatItemProps {
-    id: string;
     displayName: string;
     isDM: boolean;
     lastMsgText?: string;
@@ -18,7 +16,6 @@ interface ChatItemProps {
 }
 
 export const ChatItem = ({
-    id,
     displayName,
     isDM,
     lastMsgText: lastMessage,
@@ -27,15 +24,15 @@ export const ChatItem = ({
     timestamp,
     onClick,
 }: ChatItemProps) => {
-    const { presence, getPresence } = usePresenceStore();
+    const { getPresence } = usePresenceStore();
 
-    const isOnline = useMemo(() => {
+    const isOnline = () => {
         if (isDM) return getPresence(otherParticipants[0])?.online === true;
 
         return otherParticipants.some((userId) => getPresence(userId)?.online);
-    }, [presence]);
+    };
 
-    const lastSeenToday = useMemo(() => {
+    const lastSeenToday = () => {
         if (!isDM) return null;
 
         const lastSeen = getPresence(otherParticipants[0])?.lastSeen || null;
@@ -43,7 +40,7 @@ export const ChatItem = ({
         if (!lastSeen) return null;
 
         return getLastSeenToday(lastSeen);
-    }, [presence]);
+    };
 
     return (
         <div
@@ -55,12 +52,12 @@ export const ChatItem = ({
         >
             <div className="relative shrink-0">
                 <UserAvatar size="size-10" username={displayName} />
-                {isOnline && (
+                {isOnline() && (
                     <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></span>
                 )}
-                {!isOnline && lastSeenToday && (
+                {!isOnline && lastSeenToday() && (
                     <span className="absolute bottom-0 right-0 w-6 h-4 text-[10px] flex items-center justify-center bg-green-500 border-2 border-white rounded-full">
-                        {lastSeenToday}
+                        {lastSeenToday()}
                     </span>
                 )}
             </div>

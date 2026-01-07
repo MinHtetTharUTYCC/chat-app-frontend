@@ -65,7 +65,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     const activeChatId = useActiveChat();
     const activeChatIdRef = useRef<string | null>(activeChatId);
 
-    const { socket, setSocket } = useSocketStore();
+    const { setSocket } = useSocketStore();
     const { accessToken, currentUser, setCurrentUser } = useAuthStore();
     const { setChatsOpen } = useAppStore();
 
@@ -107,7 +107,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
                 //join chat rooms
                 chatsId.forEach((chatId: string) => {
-                    socket?.emit('join_chat', `chat_${chatId}`);
+                    newSocket.emit('join_chat', `chat_${chatId}`);
                 });
 
                 console.log('Joininged chat rooms:', chatsId);
@@ -412,7 +412,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             newSocket.off('disconnect');
             newSocket.close();
         };
-    }, [currentUser, accessToken]);
+    }, [currentUser, accessToken, router, setChatsOpen, setSocket]);
 
     useEffect(() => {
         activeChatIdRef.current = activeChatId;

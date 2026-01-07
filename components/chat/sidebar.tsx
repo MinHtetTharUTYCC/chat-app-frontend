@@ -77,11 +77,18 @@ export function ChatSidebar() {
             {/* Chat List */}
             <div className="flex-1 min-h-0">
                 <ScrollArea className="h-full p-2">
-                    {!isLoading && chats && <ChatItemsList chats={chats} />}
-                    {isLoading &&
+                    {isLoading ? (
                         Array.from({ length: 50 }).map((_, i) => (
                             <Skeleton key={i} className="h-16 w-full mb-2" />
-                        ))}
+                        ))
+                    ) : chats?.length ? (
+                        <ChatItemsList chats={chats} />
+                    ) : (
+                        <div className="mt-40 flex flex-col text-center text-muted-foreground items-center justify-center">
+                            <CreateChatDialog />
+                            Start a new chat
+                        </div>
+                    )}
                 </ScrollArea>
             </div>
 

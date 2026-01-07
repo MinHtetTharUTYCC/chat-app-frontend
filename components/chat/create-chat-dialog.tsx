@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -39,10 +39,6 @@ export function CreateChatDialog() {
                 : [...prev, user]
         );
     };
-
-    useEffect(() => {
-        setClickedDMUser(null);
-    }, [open, setClickedDMUser]);
 
     return (
         <>
@@ -195,7 +191,12 @@ export function CreateChatDialog() {
                 <UserDialog
                     user={clickedDMUser}
                     isOpen={isUserOpen}
-                    setIsOpen={setIsUserOpen}
+                    setIsOpen={(val) => {
+                        setIsUserOpen(val);
+                        if (!val) {
+                            setClickedDMUser(null);
+                        }
+                    }}
                     onDone={() => setOpen(false)}
                 />
             )}

@@ -2,7 +2,6 @@
 
 import { leaveGroup } from '@/services/chats/chat.api';
 import { chatKeys } from '@/services/chats/chat.keys';
-import { LeaveGroupResponse } from '@/types/actions';
 import { ChatsListQueryData } from '@/types/chats';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
@@ -13,7 +12,7 @@ export const useLeaveGroup = (chatId: string) => {
     const router = useRouter();
     const chatsListKey = chatKeys.all;
 
-    return useMutation<LeaveGroupResponse, Error, {}, {}>({
+    return useMutation({
         mutationFn: () => leaveGroup(chatId),
         onSuccess: () => {
             const chats = queryClient.getQueryData<ChatsListQueryData>(chatsListKey);

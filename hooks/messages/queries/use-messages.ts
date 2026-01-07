@@ -18,6 +18,8 @@ type MessagePageParam =
       }
     | undefined;
 
+type MessagesChatKey = ReturnType<typeof messageKeys.chat>;
+
 export function useMessages({
     chatId,
     jumpToMessageId,
@@ -28,7 +30,7 @@ export function useMessages({
         MessagesResponse,
         Error,
         InfiniteData<MessagesResponse>,
-        readonly any[],
+        MessagesChatKey,
         MessagePageParam
     >({
         queryKey: messageKeys.chat(chatId),

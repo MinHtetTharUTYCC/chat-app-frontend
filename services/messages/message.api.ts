@@ -1,5 +1,10 @@
 import { api } from '@/lib/api';
-import { MessageItem, MessagesResponse, PinnedResponse } from '@/types/messages';
+import {
+    MessageItem,
+    MessagesResponse,
+    PinnedResponse,
+    SearchedMessageItem,
+} from '@/types/messages';
 import {
     DeleteMessageResponse,
     EditMessageResponse,
@@ -72,5 +77,16 @@ export const getPinned = async (
     const { data } = await api.get(`/chats/${chatId}/pinned`, {
         params: { cursor, limit },
     });
+    return data;
+};
+
+export const searchMessagesInChat = async (
+    chatId: string,
+    q: string
+): Promise<SearchedMessageItem[]> => {
+    const { data } = await api.get(`/search/chats/${chatId}`, {
+        params: { q },
+    });
+
     return data;
 };

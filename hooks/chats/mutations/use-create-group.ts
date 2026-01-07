@@ -16,7 +16,7 @@ export const useCreateGroup = () => {
     const queryClient = useQueryClient();
     const router = useRouter();
 
-    return useMutation<ChatItemResponse, Error, CreateGroupVars, {}>({
+    return useMutation<ChatItemResponse, Error, CreateGroupVars, void>({
         mutationFn: ({ groupTitle, userIds }) => createGroup(groupTitle, userIds),
         onSuccess: (newChat) => {
             queryClient.setQueryData<ChatsListQueryData>(chatKeys.all, (old) =>

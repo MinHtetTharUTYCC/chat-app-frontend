@@ -41,7 +41,7 @@ export function GroupChatPreview({ chatDetails }: GroupChatPreviewProps) {
                 <Button
                     size="lg"
                     className="w-full gap-2"
-                    onClick={mutateJoinGroup}
+                    onClick={() => mutateJoinGroup()}
                     disabled={isJoiningGroup}
                 >
                     <UserPlus className="h-5 w-5" />
@@ -49,7 +49,7 @@ export function GroupChatPreview({ chatDetails }: GroupChatPreviewProps) {
                 </Button>
 
                 <p className="text-xs text-muted-foreground">
-                    You'll be able to see all messages after joining
+                    You&apos;ll be able to see all messages after joining
                 </p>
             </div>
         </div>

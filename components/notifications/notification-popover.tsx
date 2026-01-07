@@ -6,13 +6,12 @@ import { Bell, RotateCw } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { NotificationItem } from '@/types/notifications';
 import NotiItem from './noti-Item';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useNotifications } from '@/hooks/notifications/queries/use-notifications';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/hooks/use-app-store';
 
 export function NotificationPopover() {
-    const pathname = usePathname();
     const router = useRouter();
 
     const { setChatsOpen } = useAppStore();
@@ -27,27 +26,18 @@ export function NotificationPopover() {
         isError,
     } = useNotifications();
     const [isNotiOpen, setIsNotiOpen] = useState(false);
-    const pendingNavigationRef = useRef(false);
 
     const notifications = notiData?.pages.flatMap((page) => page.data) ?? [];
 
     const handleNotiClick = (chatId: string, messageId?: string) => {
+        setIsNotiOpen(false);
+        setChatsOpen(false);
         if (messageId) {
             router.push(`/chats/${chatId}?messageId=${messageId}`);
         } else {
             router.push(`/chats/${chatId}`);
         }
-        pendingNavigationRef.current = true;
     };
-
-    //close list after navigation complete
-    useEffect(() => {
-        if (pendingNavigationRef.current) {
-            setIsNotiOpen(false);
-            setChatsOpen(false);
-            pendingNavigationRef.current = false;
-        }
-    }, [pathname, setIsNotiOpen, setChatsOpen]);
 
     return (
         <Popover open={isNotiOpen} onOpenChange={setIsNotiOpen}>

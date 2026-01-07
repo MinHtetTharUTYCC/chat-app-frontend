@@ -47,7 +47,6 @@ function ChatItemsList({ chats }: { chats: ChatItemResponse[] }) {
                 return (
                     <ChatItem
                         key={chat.id}
-                        id={chat.id}
                         displayName={displayName}
                         isDM={isDM}
                         lastMsgText={lastMessageText}

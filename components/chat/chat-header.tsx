@@ -21,7 +21,6 @@ function ChatHeader({ chatId, chatDetails }: ChatHeaderProps) {
     const { currentUser } = useAuthStore();
     const { setChatsOpen } = useAppStore();
 
-    const getPresence = usePresenceStore((state) => state.getPresence);
     // to listen at useMemo(presence_update makes changes to 'presence' by calling 'updatePresence')
     const presence = usePresenceStore((state) => state.presence);
 
@@ -38,21 +37,26 @@ function ChatHeader({ chatId, chatDetails }: ChatHeaderProps) {
     const chatName = useMemo(() => {
         if (isDM) return otherParticipants[0]?.user.username || 'Unknown User';
         return chatDetails?.title || 'Group Chat';
-    }, [chatDetails, otherParticipants]);
+    }, [isDM, chatDetails, otherParticipants]);
 
     const dmPresence = useMemo(() => {
         if (!isDM || otherParticipants.length === 0) return null;
-        return getPresence(otherParticipants[0].user.id);
-    }, [isDM, otherParticipants, getPresence, presence]);
+        return presence[otherParticipants[0].user.id] ?? null;
+    }, [isDM, otherParticipants, presence]);
 
     const groupOnlineCount = useMemo(() => {
         if (isDM) return 0;
 
-        return otherParticipants.filter((p) => {
-            const presence = getPresence(p.user.id);
-            return presence?.online;
-        }).length;
-    }, [isDM, otherParticipants, getPresence, presence]);
+        let count = 0;
+
+        for (const p of otherParticipants) {
+            if (presence[p.user.id]?.online) {
+                count++;
+            }
+        }
+
+        return count;
+    }, [isDM, otherParticipants, presence]);
 
     if (!chatDetails) {
         return (

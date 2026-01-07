@@ -91,7 +91,7 @@ function UpdateTitleDialog({
                                 isTitleUpdating ? 'block' : 'hidden'
                             }`}
                         />
-                        'Save Changes'
+                        Save Changes
                     </Button>
                 </DialogFooter>
             </DialogContent>

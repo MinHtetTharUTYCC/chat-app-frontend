@@ -75,10 +75,12 @@ function MessageInput({ chatId }: MessageInputProps) {
     }, [isTyping, socket, chatId]);
 
     useEffect(() => {
+        const typingTimeout = typingTimeoutRef.current;
+
         return () => {
             cancelDebounce.current();
-            if (typingTimeoutRef.current) {
-                clearTimeout(typingTimeoutRef.current);
+            if (typingTimeout) {
+                clearTimeout(typingTimeout);
             }
             // Emit stop typing on unmount if currently typing
             if (isTyping && socket) {

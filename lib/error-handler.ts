@@ -1,14 +1,17 @@
-import { AxiosError } from 'axios';
+import axios from 'axios';
+
+//backend returned a formed error response
+type BackendError = {
+    message?: string | string[];
+};
 
 export const getErrorMessage = (error: unknown): string => {
-    if (error instanceof AxiosError) {
-        //our backend returned a formed error response
-        if (error.response?.data?.message) {
+    if (axios.isAxiosError<BackendError>(error)) {
+        const data = error.response?.data;
+
+        if (data?.message) {
             // Handle array of errors (typical in NestJS validation pipes)
-            if (Array.isArray(error.response.data.message)) {
-                return error.response.data.message[0];
-            }
-            return error.response.data.message;
+            return Array.isArray(data.message) ? data.message[0] : data.message;
         }
 
         // Network errors (server down)

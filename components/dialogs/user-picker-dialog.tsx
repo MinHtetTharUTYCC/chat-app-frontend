@@ -1,8 +1,8 @@
 'use client';
 
 import { User } from '@/types/users';
-import React, { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Check, Loader2, UserPlus, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';

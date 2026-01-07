@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { User } from '@/types/users';
 import { useSearchUsersToInvite } from '@/hooks/users/queries/use-search-invite-users';
 import { useInvite } from '@/hooks/users/mutations/use-invite';
@@ -24,11 +24,6 @@ export function InviteUserDialog({ chatId }: { chatId: string }) {
                 : [...prev, user]
         );
     };
-    useEffect(() => {
-        if (!open) {
-            setSelectedUsers([]);
-        }
-    }, [open, setSelectedUsers]);
 
     return (
         <>
@@ -38,7 +33,12 @@ export function InviteUserDialog({ chatId }: { chatId: string }) {
             </Button>
             <UserPickerDialog
                 open={open}
-                onOpenChange={setOpen}
+                onOpenChange={(isOpen) => {
+                    setOpen(isOpen);
+                    if (!isOpen) {
+                        setSelectedUsers([]);
+                    }
+                }}
                 title={'Invite Members'}
                 confirmLabel={'Invite'}
                 users={searchedUsers}
