@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { useNotifications } from '@/hooks/notifications/queries/use-notifications';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/hooks/use-app-store';
-import NotiItem from './noti-Item';
+import NotiItem from './noti-item';
 
 export function NotificationPopover() {
     const router = useRouter();

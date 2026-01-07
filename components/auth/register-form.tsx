@@ -46,7 +46,6 @@ export function RegisterForm() {
 
     return (
         <Card className="w-[350px] shadow-lg">
-            {' '}
             <CardHeader>
                 <CardTitle>Create an account</CardTitle>
             </CardHeader>
