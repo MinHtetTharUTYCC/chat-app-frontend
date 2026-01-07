@@ -2,13 +2,13 @@ import { useAuthStore } from '@/hooks/use-auth-store';
 import { refresh } from '@/services/auth/auth.api';
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 let isRefreshing = false;
 let refreshPromise: Promise<string> | null = null;
 
 export const api = axios.create({
-    baseURL: API_URL,
+    baseURL: BACKEND_URL,
     withCredentials: true,
 });
 

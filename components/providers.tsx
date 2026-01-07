@@ -31,7 +31,7 @@ import { notificationKeys } from '@/services/noti/noti.keys';
 import { ChatDetailsQueryData, ChatsListQueryData } from '@/types/chats';
 import { getErrorMessage } from '@/lib/error-handler';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 const queryClient = new QueryClient({
     //for actions(POST, PUT, DELETE)
