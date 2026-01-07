@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -16,8 +16,8 @@ import { useAuthStore } from '@/hooks/use-auth-store';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useDebounce } from '@/hooks/search/use-debounce';
-import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { useSearchMessages } from '@/hooks/messages/queries/use-search-messages';
 
 interface SearchMessageDialogProps {
     chatId: string;
@@ -31,40 +31,21 @@ function SarchMessageDialog({ isOpen, setIsOpen, chatId, closeSheet }: SearchMes
 
     const currentUser = useAuthStore((store) => store.currentUser);
     const [search, setSearch] = useState('');
-
     const debouncedSearch = useDebounce(search, 500);
 
-    const [isLoading, setIsLoading] = useState(false);
-    const [messages, setMessages] = useState<any[]>([]);
+    const {
+        data: messages = [],
+        isLoading,
+        error,
+    } = useSearchMessages(isOpen, chatId, debouncedSearch);
 
     const handleMsgClick = (messageId: string) => {
         const params = new URLSearchParams();
         params.set('messageId', messageId);
-
         setIsOpen(false);
         closeSheet();
         router.replace(`/chats/${chatId}?${params.toString()}`);
     };
-
-    useEffect(() => {
-        if (debouncedSearch.trim().length > 0) {
-            const getSearchResults = async () => {
-                setIsLoading(true);
-
-                const response = await api.get(`/search/chats/${chatId}`, {
-                    params: { q: debouncedSearch },
-                });
-
-                setMessages(response.data);
-                setIsLoading(false);
-            };
-
-            getSearchResults();
-        } else {
-            //clear the results
-            setMessages([]);
-        }
-    }, [debouncedSearch, chatId]);
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -73,7 +54,7 @@ function SarchMessageDialog({ isOpen, setIsOpen, chatId, closeSheet }: SearchMes
                     <Search />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-150">
                 <DialogHeader>
                     <DialogTitle>Search Messages</DialogTitle>
                 </DialogHeader>
@@ -84,21 +65,23 @@ function SarchMessageDialog({ isOpen, setIsOpen, chatId, closeSheet }: SearchMes
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
-                    <ScrollArea className="h-[400px] border rounded-md p-2">
+                    <ScrollArea className="h-100 border rounded-md p-2">
                         {isLoading && (
                             <div className="flex items-center justify-center p-4">
                                 <Loader2 className="animate-spin" />
                             </div>
                         )}
 
-                        {!isLoading && messages.length === 0 && (
+                        {!isLoading && !error && messages.length === 0 && (
                             <p className="text-center p-4">No message found</p>
                         )}
+
+                        {error && <div className="text-center p-4">Something went wrong</div>}
 
                         {!isLoading && messages.length >= 1 && (
                             <div>
                                 <p className="text-center p-4">{messages.length} results found</p>
-                                {messages.reverse().map((msg: any) => (
+                                {[...messages].reverse().map((msg) => (
                                     <div
                                         key={msg.id}
                                         className={cn(

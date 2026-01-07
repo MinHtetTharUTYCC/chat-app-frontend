@@ -1,6 +1,6 @@
 'use client';
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { useEffect, useRef } from 'react';
@@ -13,11 +13,51 @@ import { useRouter } from 'next/navigation';
 import { useActiveChat } from '@/hooks/params/use-active-chat';
 import { shouldShowMessageToast, shouldShowTitleUpdateToast } from '@/lib/chat/toast-rules';
 import { useAppStore } from '@/hooks/use-app-store';
-import { ChatItemResponse } from '@/types/types';
+import { MessageInfiniteData, MessageItem } from '@/types/messages';
+import {
+    NewChatReceiver,
+    MessageEditedReceiver,
+    PinAddedReceiver,
+    GroupAddedReceiver,
+    TitleUpdateReceiver,
+    UserJoinedGroupReceiver,
+    UserLeftGroupReceiver,
+    MembersAddedReceiver,
+    GroupInvitedReceiver,
+} from '@/types/receivers';
+import { chatKeys } from '@/services/chats/chat.keys';
+import { messageKeys, pinnedKeys } from '@/services/messages/messages.keys';
+import { notificationKeys } from '@/services/noti/noti.keys';
+import { ChatDetailsQueryData, ChatsListQueryData } from '@/types/chats';
+import { getErrorMessage } from '@/lib/error-handler';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL!;
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+    //for actions(POST, PUT, DELETE)
+    mutationCache: new MutationCache({
+        onError: (error, _variables, _context, mutation) => {
+            // if mutation has its own onError, skip global one
+            if (mutation.options.onError) return;
+
+            const msg = getErrorMessage(error);
+            toast.error(msg);
+        },
+    }),
+    // Global error handler for Queries(GET)
+    queryCache: new QueryCache({
+        onError: (error) => {
+            const msg = getErrorMessage(error);
+            toast.error(`Error loading data: ${msg}`);
+        },
+    }),
+    defaultOptions: {
+        queries: {
+            retry: 1, //don't retry infinitely on error
+            refetchOnWindowFocus: false,
+        },
+    },
+});
 
 export function Providers({ children }: { children: React.ReactNode }) {
     const router = useRouter();
@@ -25,12 +65,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
     const activeChatId = useActiveChat();
     const activeChatIdRef = useRef<string | null>(activeChatId);
 
-    const { socket, setSocket } = useSocketStore();
+    const { setSocket } = useSocketStore();
     const { accessToken, currentUser, setCurrentUser } = useAuthStore();
     const { setChatsOpen } = useAppStore();
 
     // 1. Load user ONCE on page load
     useEffect(() => {
+        if (!accessToken) return;
+
         async function loadUser() {
             try {
                 const res = await api.get('/users/me');
@@ -39,7 +81,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         }
 
         loadUser();
-    }, [setCurrentUser]);
+    }, [accessToken, setCurrentUser]);
 
     // 2. Connect socket only AFTER user exists
     useEffect(() => {
@@ -65,7 +107,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
                 //join chat rooms
                 chatsId.forEach((chatId: string) => {
-                    socket?.emit('join_chat', `chat_${chatId}`);
+                    newSocket.emit('join_chat', `chat_${chatId}`);
                 });
 
                 console.log('Joininged chat rooms:', chatsId);
@@ -74,7 +116,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             }
         };
 
-        const handleNewMessage = async (newMessage: any) => {
+        const handleNewMessage = async (newMessage: MessageItem) => {
             const shouldShowToast = shouldShowMessageToast({
                 activeChatId: activeChatIdRef.current,
                 messageChatId: newMessage.chatId,
@@ -99,10 +141,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
             if (newMessage.senderId === currentUser.id) return;
 
             //update chatsList
-            queryClient.setQueryData(['chats'], (old: any[] | undefined) => {
+            queryClient.setQueryData<ChatsListQueryData>(chatKeys.all, (old) => {
                 if (!old) return old;
 
-                const chatIndex = old.findIndex((chat: any) => chat.id === newMessage.chatId);
+                const chatIndex = old.findIndex((chat) => chat.id === newMessage.chatId);
 
                 if (chatIndex === -1) {
                     return old;
@@ -120,35 +162,73 @@ export function Providers({ children }: { children: React.ReactNode }) {
             });
 
             //update chat
-            queryClient.setQueryData(['messages', newMessage.chatId], (oldData: any) => {
-                if (!oldData) return oldData;
+            queryClient.setQueryData<MessageInfiniteData>(
+                ['messages', newMessage.chatId],
+                (oldData) => {
+                    if (!oldData) return oldData;
 
-                const firstPage = oldData.pages[0];
-                const updatedFirstPage = {
-                    ...firstPage,
-                    messages: [newMessage, ...firstPage.messages],
-                };
-                return {
-                    ...oldData,
-                    pages: [updatedFirstPage, ...oldData.pages.slice(1)],
-                };
-            });
+                    const firstPage = oldData.pages[0];
+                    const updatedFirstPage = {
+                        ...firstPage,
+                        messages: [...firstPage.messages, newMessage],
+                    };
+                    return {
+                        ...oldData,
+                        pages: [updatedFirstPage, ...oldData.pages.slice(1)],
+                    };
+                }
+            );
         };
 
-        const handleTitleUpdate = async (details: any) => {
+        const handleEditMessage = async (editedMessage: MessageEditedReceiver) => {
+            // ignore messages edited by me(already updated optimistically while sending)
+            if (editedMessage.actor.id === currentUser.id) return;
+
+            //sidebar list
+            queryClient.invalidateQueries({ queryKey: chatKeys.all });
+
+            // chat messages
+            let found = false;
+            queryClient.setQueryData<MessageInfiniteData>(
+                messageKeys.chat(editedMessage.chatId),
+                (oldData) => {
+                    if (!oldData) return undefined;
+
+                    return {
+                        ...oldData,
+                        pages: oldData.pages.map((page) => {
+                            if (found) return page; //skip the rest
+
+                            const newMessages = page.messages.map((msg) => {
+                                if (msg.id === editedMessage.messageId) {
+                                    found = true;
+                                    return { ...msg, content: editedMessage.content };
+                                }
+
+                                return msg;
+                            });
+
+                            return { ...page, messages: newMessages };
+                        }),
+                    };
+                }
+            );
+        };
+
+        const handleTitleUpdate = async (titleUpdate: TitleUpdateReceiver) => {
             const showToast = shouldShowTitleUpdateToast({
                 activeChatId: activeChatIdRef.current,
-                titleChatId: details.chatId,
-                senderId: details.updatedById,
+                titleChatId: titleUpdate.chatId,
+                senderId: titleUpdate.actor.id,
                 currentUserId: currentUser.id,
             });
             if (showToast) {
                 toast('Group Name Update', {
-                    description: `${details.username} changed group name to ${details.newTitle}`,
+                    description: `${titleUpdate.actor.username} changed group name to ${titleUpdate.newTitle}`,
                     action: {
                         label: 'View',
                         onClick: () => {
-                            router.push(`/chats/${details.chatId}`);
+                            router.push(`/chats/${titleUpdate.chatId}`);
                             setChatsOpen(false);
                         },
                     },
@@ -156,48 +236,161 @@ export function Providers({ children }: { children: React.ReactNode }) {
             }
 
             // ignore my own updates (already handled optimistically while updating)
-            if (details.updatedById === currentUser.id) return;
+            if (titleUpdate.actor.id === currentUser.id) return;
 
             //update queries
-            queryClient.setQueryData(['chats'], (old: any) => {
+            queryClient.setQueryData<ChatsListQueryData>(chatKeys.all, (old) => {
                 if (!old) return old;
 
-                return old.map((chat: any) =>
-                    chat.id === details.chatId ? { ...chat, title: details.newTitle } : chat
+                return old.map((chat) =>
+                    chat.id === titleUpdate.chatId ? { ...chat, title: titleUpdate.newTitle } : chat
                 );
             });
-            queryClient.setQueryData(['chat', details.chatId], (old: any) => {
-                if (!old) return old;
+            queryClient.setQueryData<ChatDetailsQueryData>(
+                chatKeys.chat(titleUpdate.chatId),
+                (old) => {
+                    if (!old) return old;
 
-                return { ...old, title: details.newTitle };
-            });
+                    return { ...old, title: titleUpdate.newTitle };
+                }
+            );
         };
 
-        const handleGroupAdded = async (groupChat: ChatItemResponse) => {
+        const handleGroupAdded = async (newGroup: GroupAddedReceiver) => {
             toast('New Group', {
-                description: `You are added to a new group${
-                    groupChat.title ? `: ${groupChat.title}` : ''
-                }`,
+                description: `${newGroup.user.username} added you to ${newGroup.title}`,
                 action: {
                     label: 'View',
                     onClick: () => {
                         setChatsOpen(false);
-                        router.push(`/chats/${groupChat.id}`);
+                        router.push(`/chats/${newGroup.chatId}`);
                     },
                 },
             });
 
-            queryClient.setQueryData(['chats'], (old: ChatItemResponse[] | undefined) => {
-                if (!old) return old;
+            queryClient.invalidateQueries({ queryKey: chatKeys.all });
+            queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+        };
 
-                return [groupChat, ...old];
+        const handleGroupInvited = async (newGroup: GroupInvitedReceiver) => {
+            toast('Group Invited', {
+                description: `${newGroup.user.username} invited you to join ${newGroup.title}`,
+                action: {
+                    label: 'View',
+                    onClick: () => {
+                        setChatsOpen(false);
+                        router.push(`/chats/${newGroup.chatId}`);
+                    },
+                },
+            });
+
+            queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+        };
+
+        const handleUserJoinedGroup = async (group: UserJoinedGroupReceiver) => {
+            if (group.user.id === currentUser.id) return;
+
+            toast('New Member', {
+                description: `${group.user.username} joined ${group.title}`,
+                action: {
+                    label: 'View',
+                    onClick: () => router.push(`/chats/${group.chatId}`),
+                },
+            });
+
+            queryClient.invalidateQueries({ queryKey: chatKeys.chat(group.chatId) });
+            queryClient.invalidateQueries({ queryKey: chatKeys.all });
+        };
+
+        const handleUserLeftGroup = async (group: UserLeftGroupReceiver) => {
+            if (group.user.id === currentUser.id) return;
+
+            toast('Member Left', {
+                description: `${group.user.username} left ${group.title}`,
+                action: {
+                    label: 'View',
+                    onClick: () => router.push(`/chats/${group.chatId}`),
+                },
+            });
+
+            queryClient.invalidateQueries({ queryKey: chatKeys.chat(group.chatId) });
+            queryClient.invalidateQueries({ queryKey: chatKeys.all });
+        };
+
+        const handleMembersAddedToGroup = async (added: MembersAddedReceiver) => {
+            if (added.user.id === currentUser.id) return;
+
+            toast('New Members', {
+                description: `${added.user.username} added ${added.addedMembersCount} ${
+                    added.addedMembersCount > 1 ? ' members' : ' member'
+                } to ${added.title}`,
+                action: {
+                    label: 'View',
+                    onClick: () => router.push(`/chats/${added.chatId}`),
+                },
+            });
+
+            queryClient.invalidateQueries({ queryKey: chatKeys.all });
+            queryClient.invalidateQueries({ queryKey: chatKeys.chat(added.chatId) });
+        };
+
+        const handleNewChat = async (newChat: NewChatReceiver) => {
+            toast('New Chat', {
+                description: `${newChat.starter.username} started a new chat`,
+                action: {
+                    label: 'View',
+                    onClick: () => {
+                        setChatsOpen(false);
+                        router.push(`/chats/${newChat.chatId}`);
+                    },
+                },
+            });
+
+            queryClient.invalidateQueries({ queryKey: chatKeys.all });
+        };
+
+        const handlePinAdded = async (pinned: PinAddedReceiver) => {
+            // skip mine
+            if (pinned.actor.id === currentUser.id) {
+                return;
+            }
+
+            toast('Pinned', {
+                description: `${pinned.actor.username} pinned your message`,
+                action: {
+                    label: 'View',
+                    onClick: () => {
+                        setChatsOpen(false);
+                        router.push(`/chats/${pinned.chatId}?messageId=${pinned.messageId}`);
+                    },
+                },
+            });
+
+            // notifications
+            queryClient.refetchQueries({
+                queryKey: notificationKeys.all,
+                exact: false,
+                type: 'all',
+            });
+
+            //pinned
+            queryClient.invalidateQueries({
+                queryKey: pinnedKeys.chat(pinned.chatId),
             });
         };
 
         newSocket.on('connect', hanldeJoinRooms);
         newSocket.on('title_update', handleTitleUpdate);
         newSocket.on('new_message', handleNewMessage);
+        newSocket.on('message_edited', handleEditMessage);
+        newSocket.on('new_chat', handleNewChat);
         newSocket.on('group_added', handleGroupAdded);
+        newSocket.on('group_invited', handleGroupInvited);
+        newSocket.on('user_joined_group', handleUserJoinedGroup);
+        newSocket.on('user_left_group', handleUserLeftGroup);
+        newSocket.on('members_added', handleMembersAddedToGroup);
+        newSocket.on('pin_added', handlePinAdded);
+
         newSocket.on('disconnect', () => {
             console.log('WS Disconnected');
         });
@@ -208,11 +401,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
             newSocket.off('connect', hanldeJoinRooms);
             newSocket.off('title_update', handleTitleUpdate);
             newSocket.off('new_message', handleNewMessage);
-            newSocket.on('group_added', handleGroupAdded);
+            newSocket.off('message_edited', handleEditMessage);
+            newSocket.off('new_chat', handleNewChat);
+            newSocket.off('group_added', handleGroupAdded);
+            newSocket.off('group_invited', handleGroupInvited);
+            newSocket.off('user_joined_group', handleUserJoinedGroup);
+            newSocket.off('user_left_group', handleUserLeftGroup);
+            newSocket.off('members_added', handleMembersAddedToGroup);
+            newSocket.off('pin_added', handlePinAdded);
             newSocket.off('disconnect');
             newSocket.close();
         };
-    }, [currentUser, accessToken]);
+    }, [currentUser, accessToken, router, setChatsOpen, setSocket]);
 
     useEffect(() => {
         activeChatIdRef.current = activeChatId;

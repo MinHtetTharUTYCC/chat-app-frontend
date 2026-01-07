@@ -25,6 +25,7 @@ import { useUnpinMessage } from '@/hooks/messages/mutations/use-unpin-message';
 interface MessageActionsProps {
     chatId: string;
     messageId: string;
+    msgSenderId: string;
     currentContent: string;
     isMe: boolean;
     isPinned: boolean;
@@ -34,6 +35,7 @@ interface MessageActionsProps {
 export function MessageActions({
     chatId,
     messageId,
+    msgSenderId,
     currentContent,
     isMe,
     isPinned,
@@ -43,7 +45,7 @@ export function MessageActions({
     const [editContent, setEditContent] = useState(currentContent);
 
     // edit
-    const { mutate: mutateEdit, isPending: isPendingEdit } = useEditMessage(chatId, setEditOpen);
+    const { mutate: mutateEdit, isPending: isPendingEdit } = useEditMessage(chatId);
     // delete
     const { mutate: mutateDeleteMessage, isPending: isPendingDelete } = useDeleteMessage(chatId);
     // pin
@@ -73,7 +75,13 @@ export function MessageActions({
                     )}
                     {!isPinned && (
                         <DropdownMenuItem
-                            onClick={() => mutatePinMessage({ messageId, content: currentContent })}
+                            onClick={() =>
+                                mutatePinMessage({
+                                    messageId,
+                                    content: currentContent,
+                                    msgSenderId: msgSenderId,
+                                })
+                            }
                             disabled={isPendingPin || isPendingUnpin}
                         >
                             <Pin className="mr-2 h-4 w-4" /> Pin
@@ -105,7 +113,10 @@ export function MessageActions({
                     <Input value={editContent} onChange={(e) => setEditContent(e.target.value)} />
                     <DialogFooter>
                         <Button
-                            onClick={() => mutateEdit({ messageId, content: editContent })}
+                            onClick={() => {
+                                setEditOpen(false);
+                                mutateEdit({ messageId, content: editContent });
+                            }}
                             disabled={isPendingEdit}
                         >
                             Save

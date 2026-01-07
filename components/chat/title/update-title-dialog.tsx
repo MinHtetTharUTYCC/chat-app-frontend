@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
     Dialog,
     DialogClose,
@@ -12,12 +12,9 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { api } from '@/lib/api';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Edit, Loader2 } from 'lucide-react';
-import { useUpdateTitle } from '@/hooks/chats/mutations/use-update-titlte';
+import { useUpdateTitle } from '@/hooks/chats/mutations/use-update-title';
 
 interface SearchMessageDialogProps {
     chatId: string;
@@ -26,10 +23,6 @@ interface SearchMessageDialogProps {
     isOpen: boolean;
     setIsOpen: (val: boolean) => void;
     closeSheet: () => void;
-}
-interface UpdateTitleContext {
-    prevChat: any;
-    prevChatsList: any;
 }
 
 function UpdateTitleDialog({
@@ -42,10 +35,7 @@ function UpdateTitleDialog({
 }: SearchMessageDialogProps) {
     const [inputTitle, setInputTitle] = useState(title ?? 'New Group');
 
-    const { mutate: mutateUpdateTitle, isPending: isTitleUpdating } = useUpdateTitle(
-        chatId,
-        setChatTitle
-    );
+    const { mutate: mutateUpdateTitle, isPending: isTitleUpdating } = useUpdateTitle();
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -54,7 +44,7 @@ function UpdateTitleDialog({
                     <Edit />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-150">
                 <DialogHeader>
                     <DialogTitle>Update Chat Name</DialogTitle>
                     <DialogDescription>Give your group chat a new name</DialogDescription>
@@ -76,14 +66,27 @@ function UpdateTitleDialog({
                     <Button
                         size="sm"
                         className="cursor-pointer"
-                        onClick={() =>
-                            mutateUpdateTitle({
-                                title: inputTitle,
-                                setChatTitle,
-                                setIsOpen,
-                                closeSheet,
-                            })
-                        }
+                        onClick={() => {
+                            const trimmedTitle = inputTitle.trim();
+
+                            mutateUpdateTitle(
+                                {
+                                    title: inputTitle,
+                                    chatId,
+                                },
+                                {
+                                    onSuccess: () => {
+                                        setChatTitle(trimmedTitle);
+                                        setIsOpen(false);
+                                        closeSheet();
+                                    },
+                                    onError: () => {
+                                        setInputTitle(title ?? 'Group Chat');
+                                        setChatTitle(title ?? 'Group Chat');
+                                    },
+                                }
+                            );
+                        }}
                         disabled={isTitleUpdating || title === inputTitle.trim()}
                     >
                         <Loader2
@@ -91,7 +94,7 @@ function UpdateTitleDialog({
                                 isTitleUpdating ? 'block' : 'hidden'
                             }`}
                         />
-                        'Save Changes'
+                        Save Changes
                     </Button>
                 </DialogFooter>
             </DialogContent>

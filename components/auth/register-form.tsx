@@ -14,11 +14,12 @@ import {
 } from '@/components/ui/form';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { RegisterSchema, RegisterValues } from './validation';
 import { register } from '@/services/auth/auth.api';
+import { getErrorMessage } from '@/lib/error-handler';
 
 export function RegisterForm() {
     const router = useRouter();
@@ -38,9 +39,8 @@ export function RegisterForm() {
 
             toast.success('Account created successfully');
             router.push('/login');
-        } catch (error: any) {
-            const msg = error.response?.data?.message || 'Something went wrong';
-            toast.error(msg);
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error));
         }
     }
 

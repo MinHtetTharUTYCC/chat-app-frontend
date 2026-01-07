@@ -14,7 +14,10 @@ import { useTypingSound } from '@/hooks/sound/use-typing-sound';
 import { useMessages } from '@/hooks/messages/queries/use-messages';
 import Typing from './typing';
 import MessageInput from './message-input';
-import { MessageItem } from '@/types/types';
+import { MessageItem } from '@/types/messages';
+import { useChatDetails } from '@/hooks/chats/queries/use-chat-details';
+import { GroupChatPreview } from './group-chat-preview';
+import { TypingReceiver } from '@/types/receivers';
 
 interface ChatWindowProps {
     chatId: string;
@@ -35,9 +38,10 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
     const prevScrollHeightRef = useRef<number>(0); //for up
     const prevScrollTopRef = useRef<number>(0); //for down
 
-    const [isOtherTyping, setIsOtherTyping] = useState(false); //other user
+    const [isOtherTyping, setIsOtherTyping] = useState(false);
     useTypingSound(isOtherTyping);
 
+    const { data: chatDetails, isLoading: isChatLoading } = useChatDetails(chatId);
     const {
         data,
         fetchNextPage, //older msgs
@@ -46,8 +50,13 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         hasPreviousPage,
         isFetchingNextPage,
         isFetchingPreviousPage,
-        isLoading,
-    } = useMessages({ chatId, jumpToMessageId: messageId, jumpToDate: date });
+        isLoading: isLoadingMessages,
+    } = useMessages({
+        chatId,
+        jumpToMessageId: messageId,
+        jumpToDate: date,
+        enabled: chatDetails?.isParticipant ?? false,
+    });
 
     // initially auto-scroll to position(message/date) or bottom(default)
     useEffect(() => {
@@ -73,18 +82,15 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                                 hasScrolledToMiddleRef.current = true;
                             }
                         });
-                    } else if (date) {
-                        //TODO: handle date scroll
                     }
                 }
             } else if (bottomRef.current) {
                 // Normal load - scroll to bottom
-                console.log('CALLED: SCRL BTMMMM');
                 bottomRef.current.scrollIntoView({ behavior: 'instant' });
                 hasScrolledToBottomInitiallyRef.current = true;
             }
         }
-    }, [isInMiddle, data?.pages[0]]);
+    }, [isInMiddle, data, messageId]);
 
     useEffect(() => {
         const el = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
@@ -98,13 +104,11 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                 hasScrolledToBottomInitiallyRef.current === true;
 
             if (!isInitialScrollDone) {
-                console.log('Waiting for initial scroll to complete...');
                 return; // Exit early
             }
 
             // Load OLDER messages (scroll upward)
             if (el.scrollTop <= 10 && hasNextPage && !isFetchingNextPage) {
-                console.log('⬆️ Loading older messages...');
                 fetchNextPage();
             }
 
@@ -115,7 +119,6 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                 !isFetchingPreviousPage &&
                 isInMiddle
             ) {
-                console.log('⬇️ Loading newer messages...');
                 fetchPreviousPage();
             }
         };
@@ -131,12 +134,13 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         isFetchingPreviousPage,
         hasScrolledToBottomInitiallyRef,
         hasScrolledToMiddleRef,
+        isInMiddle,
     ]);
 
     useEffect(() => {
         if (!socket || !chatId) return;
 
-        const handleUserTyping = (typingDetails: any) => {
+        const handleUserTyping = (typingDetails: TypingReceiver) => {
             if (typingDetails.chatId === chatId) {
                 setIsOtherTyping(typingDetails.isTyping);
             }
@@ -171,6 +175,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         prevScrollHeightRef.current = 0;
         prevScrollTopRef.current = 0;
     }, [messageId]);
+
     useEffect(() => {
         hasScrolledToBottomInitiallyRef.current = false;
         hasScrolledToMiddleRef.current = false;
@@ -185,7 +190,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         });
 
         return flattened;
-    }, [data?.pages]);
+    }, [data]);
 
     if (!chatId) {
         return (
@@ -195,20 +200,38 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         );
     }
 
-    if (!socket) {
+    if (!socket || isLoadingMessages || isChatLoading) {
         return (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-                Connecting to chat...
+            <div className="flex flex-col h-full items-center justify-center text-muted-foreground">
+                <Loader2 className="animate-spin" size={40} strokeWidth={2} />
+                <p>Connecting to chat...</p>
             </div>
         );
     }
 
-    if (!currentUser) return <div>You need to authenticate first</div>;
+    // Handle chat not found or forbidden
+    if (!chatDetails) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-background text-muted-foreground">
+                <p>Chat not found or you don&apos;t have access</p>
+            </div>
+        );
+    }
+
+    //! not working as expected
+    if (chatDetails.isParticipant === false) {
+        return (
+            <div className="flex flex-col h-full bg-background">
+                <ChatHeader chatId={chatId} chatDetails={chatDetails} />
+                <GroupChatPreview chatDetails={chatDetails} />
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
-            <ChatHeader chatId={chatId} />
+            <ChatHeader chatId={chatId} chatDetails={chatDetails} />
 
             {/* Messages Area */}
             <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 overflow-auto">
@@ -226,11 +249,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                     </div>
                 )}
 
-                {isLoading ? (
-                    <div className="flex justify-center p-4">
-                        <Loader2 className="animate-spin" />
-                    </div>
-                ) : messages.length > 0 ? (
+                {messages.length > 0 ? (
                     messages.map((msg: MessageItem) => {
                         if (!msg || !msg.id) return null;
                         return (
@@ -257,6 +276,7 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                                 <MessageActions
                                     chatId={chatId}
                                     messageId={msg.id}
+                                    msgSenderId={msg.senderId}
                                     currentContent={msg.content}
                                     isMe={msg.senderId === currentUser?.id}
                                     isPinned={msg.isPinned}
@@ -268,7 +288,9 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                         );
                     })
                 ) : (
-                    <div>No messages yet</div>
+                    <div className="w-full flex items-center justify-center text-muted-foreground mt-20">
+                        No messages yet.
+                    </div>
                 )}
 
                 {isFetchingPreviousPage && (

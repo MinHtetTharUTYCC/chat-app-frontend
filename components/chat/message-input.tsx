@@ -1,11 +1,27 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Input } from '../ui/input';
 import { useSendMessage } from '@/hooks/messages/mutations/use-send-message';
 import { Button } from '../ui/button';
 import { Loader2, Send } from 'lucide-react';
 import { useSocketStore } from '@/hooks/use-socket-store';
+
+const debounce = (func: () => void, delay: number) => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const debounced = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(func, delay);
+    };
+
+    const cancel = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = null;
+    };
+
+    return { debounced, cancel };
+};
 
 interface MessageInputProps {
     chatId: string;
@@ -18,21 +34,53 @@ function MessageInput({ chatId }: MessageInputProps) {
 
     const { socket } = useSocketStore();
 
-    const { mutate: mutateSendMessage, isPending: isSendingMessage } = useSendMessage(
-        chatId,
-        setInput
-    );
+    const stopTyping = useCallback(() => {
+        if (socket) {
+            socket.emit('typing', { chatId, isTyping: false });
+            setIsTyping(false);
+        }
+    }, [socket, chatId]);
+
+    const debouncedStop = useRef<() => void>(() => {});
+    const cancelDebounce = useRef<() => void>(() => {});
+
+    useEffect(() => {
+        const { debounced, cancel } = debounce(stopTyping, 2000);
+        debouncedStop.current = debounced;
+        cancelDebounce.current = cancel;
+
+        return () => {
+            cancel();
+        };
+    }, [stopTyping]);
+
+    const { mutate: mutateSendMessage, isPending: isSendingMessage } = useSendMessage(chatId);
 
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim()) return;
-        mutateSendMessage({ content: input.trim() });
+
+        const msgToSend = input.trim();
+        if (!msgToSend) return;
+
+        setInput('');
+        mutateSendMessage({ content: msgToSend });
     };
 
+    const handleKeyDown = useCallback(() => {
+        if (!isTyping && socket) {
+            socket.emit('typing', { chatId, isTyping: true });
+            setIsTyping(true);
+        }
+        debouncedStop.current();
+    }, [isTyping, socket, chatId]);
+
     useEffect(() => {
+        const typingTimeout = typingTimeoutRef.current;
+
         return () => {
-            if (typingTimeoutRef.current) {
-                clearTimeout(typingTimeoutRef.current);
+            cancelDebounce.current();
+            if (typingTimeout) {
+                clearTimeout(typingTimeout);
             }
             // Emit stop typing on unmount if currently typing
             if (isTyping && socket) {
@@ -52,23 +100,7 @@ function MessageInput({ chatId }: MessageInputProps) {
                     placeholder="Type a message..."
                     className="flex-1"
                     disabled={isSendingMessage}
-                    onKeyDown={() => {
-                        if (!isTyping) {
-                            socket.emit('typing', { chatId, isTyping: true });
-                            setIsTyping(true);
-                        }
-
-                        //clear prev timeOut
-                        if (typingTimeoutRef.current) {
-                            clearTimeout(typingTimeoutRef.current);
-                        }
-
-                        //set a new timeout to stop typing after 2 sec of inactivity
-                        typingTimeoutRef.current = setTimeout(() => {
-                            socket.emit('typing', { chatId, isTyping: false });
-                            setIsTyping(false);
-                        }, 2000);
-                    }}
+                    onKeyDown={handleKeyDown}
                 />
                 <Button type="submit" disabled={isSendingMessage || !input.trim()}>
                     {isSendingMessage ? (

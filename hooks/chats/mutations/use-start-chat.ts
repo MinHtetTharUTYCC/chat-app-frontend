@@ -2,9 +2,9 @@
 
 import { chatKeys } from '@/services/chats/chat.keys';
 import { startChat } from '@/services/chats/chat.api';
-import { ChatItemResponse } from '@/types/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { ChatsListQueryData } from '@/types/chats';
 
 export const useStartChat = (otherUserId: string) => {
     const queryClient = useQueryClient();
@@ -12,13 +12,13 @@ export const useStartChat = (otherUserId: string) => {
 
     return useMutation({
         mutationFn: () => startChat(otherUserId),
-        onSuccess: (newChat) => {
-            queryClient.setQueryData(chatKeys.all, (old: ChatItemResponse[] | undefined) => {
-                if (!old) return [newChat];
-                return [newChat, ...old];
-            });
-
-            router.push(`/chats/${newChat.id}`);
+        onSuccess: ({ oldChatExists, chat }) => {
+            if (!oldChatExists) {
+                queryClient.setQueryData<ChatsListQueryData>(chatKeys.all, (old) =>
+                    old ? [chat, ...old] : old
+                );
+            }
+            router.push(`/chats/${chat.id}`);
         },
     });
 };

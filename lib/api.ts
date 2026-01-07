@@ -1,14 +1,15 @@
 import { useAuthStore } from '@/hooks/use-auth-store';
 import { refresh } from '@/services/auth/auth.api';
 import axios from 'axios';
+import { toast } from 'sonner';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 let isRefreshing = false;
 let refreshPromise: Promise<string> | null = null;
 
 export const api = axios.create({
-    baseURL: API_URL,
+    baseURL: BACKEND_URL,
     withCredentials: true,
 });
 
@@ -25,12 +26,26 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        // Only refresh on 401
+        if (!error.response) {
+            return Promise.reject(error);
+        }
+
+        // Stop on rate limit
+        if (error.response.status === 429) {
+            const retryAfter = error.response.headers['retry-after'];
+            if (retryAfter) {
+                const waitMs = Number(retryAfter) * 1000;
+                toast.error(`Too many requests: try again in ${waitMs}`);
+            }
+            return Promise.reject(error);
+        }
+
+        // Only handle 401 once
         if (error.response?.status !== 401 || originalRequest._retry) {
             return Promise.reject(error);
         }
 
-        // do not refresh if refresh itself failed
+        // don't refresh refresh
         if (originalRequest.url.includes('/auth/refresh')) {
             useAuthStore.getState().logout();
             return Promise.reject(error);
@@ -58,7 +73,9 @@ api.interceptors.response.use(
             const newToken = await refreshPromise;
 
             // retry original request
-            originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+            originalRequest.headers = originalRequest.headers || {};
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+
             return api(originalRequest);
         } catch (refreshError) {
             useAuthStore.getState().logout();

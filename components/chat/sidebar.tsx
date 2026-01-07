@@ -5,7 +5,7 @@ import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateChatDialog } from './create-chat-dialog';
-import { NotificationPopover } from './notification-popover';
+import { NotificationPopover } from '../notifications/notification-popover';
 import UserNav from '../user-nav';
 import { usePathname, useRouter } from 'next/navigation';
 import { ModeToggle } from '../mode-toggle';
@@ -14,6 +14,7 @@ import { usePresenceStore } from '@/hooks/use-presence-store';
 import ChatItemsList from './chat-items-list';
 import { useChats } from '@/hooks/chats';
 import { useAllPresense } from '@/hooks/presence/queries/use-all-presence';
+import Link from 'next/link';
 
 export function ChatSidebar() {
     const pathname = usePathname();
@@ -35,9 +36,9 @@ export function ChatSidebar() {
         if (!chats) return [];
 
         const ids = new Set<string>();
-        chats.forEach((chat: any) => {
-            chat.participants.forEach((p: any) => {
-                ids.add(p.userId);
+        chats.forEach((chat) => {
+            chat.participants.forEach((parti) => {
+                ids.add(parti.userId);
             });
         });
 
@@ -54,11 +55,13 @@ export function ChatSidebar() {
     }, [presenceData, bulkUpdatePresence]);
 
     return (
-        <div className="flex flex-col h-screen border-r bg-background">
+        <div className="w-full flex flex-col h-screen border-r bg-background">
             {/* Header */}
             <div className="p-4 border-b space-y-4">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold">Messages</h2>
+                    <Link href={'/'} className="text-xl font-bold">
+                        Messages
+                    </Link>
                     <div className="flex gap-1">
                         <NotificationPopover />
                         <CreateChatDialog />
@@ -74,11 +77,18 @@ export function ChatSidebar() {
             {/* Chat List */}
             <div className="flex-1 min-h-0">
                 <ScrollArea className="h-full p-2">
-                    {!isLoading && chats && <ChatItemsList chats={chats} />}
-                    {isLoading &&
+                    {isLoading ? (
                         Array.from({ length: 50 }).map((_, i) => (
                             <Skeleton key={i} className="h-16 w-full mb-2" />
-                        ))}
+                        ))
+                    ) : chats?.length ? (
+                        <ChatItemsList chats={chats} />
+                    ) : (
+                        <div className="mt-40 flex flex-col text-center text-muted-foreground items-center justify-center">
+                            <CreateChatDialog />
+                            Start a new chat
+                        </div>
+                    )}
                 </ScrollArea>
             </div>
 

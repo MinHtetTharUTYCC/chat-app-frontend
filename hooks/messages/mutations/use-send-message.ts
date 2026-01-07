@@ -1,19 +1,23 @@
+'use client';
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../use-auth-store';
 import { messageKeys } from '@/services/messages/messages.keys';
 import { chatKeys } from '@/services/chats/chat.keys';
 import { sendMessage } from '@/services/messages/message.api';
-import { MessageItem } from '@/types/types';
+import { MessageInfiniteData, MessageItem } from '@/types/messages';
+import { ChatsListQueryData } from '@/types/chats';
+import { toast } from 'sonner';
 
 interface SendMessageVar {
     content: string;
 }
 interface SendMessageContext {
-    prevMessages: unknown;
-    prevChatList: unknown;
+    prevMessages?: MessageInfiniteData;
+    prevChatList?: ChatsListQueryData;
     tempId: string;
 }
-export function useSendMessage(chatId: string, setInput: (value: string) => void) {
+export function useSendMessage(chatId: string) {
     const queryClient = useQueryClient();
     const { currentUser } = useAuthStore();
 
@@ -26,37 +30,43 @@ export function useSendMessage(chatId: string, setInput: (value: string) => void
             if (!currentUser) {
                 throw new Error('User must be authenticated before sending messages.');
             }
+
             //cancel queries
-            await queryClient.cancelQueries({ queryKey: chatMessagesKey });
+            await Promise.all([
+                queryClient.cancelQueries({ queryKey: chatMessagesKey }),
+                queryClient.cancelQueries({ queryKey: chatListKey }),
+            ]);
 
             //snapshot prev state
-            const prevMessages = queryClient.getQueryData(chatMessagesKey);
-            const prevChatList = queryClient.getQueryData(chatListKey);
+            const prevMessages = queryClient.getQueryData<MessageInfiniteData>(chatMessagesKey);
+            const prevChatList = queryClient.getQueryData<ChatsListQueryData>(chatListKey);
 
-            //create optismistic essage
+            //create optimistic message
             const tempId = `temp-${Date.now()}-${Math.random()}`;
             const optimisticMessage = {
                 id: tempId,
                 content,
-                senderId: currentUser.id,
                 chatId,
+                senderId: currentUser.id,
+                isPinned: false,
+                pinnedByUserId: null,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 sender: {
                     id: currentUser.id,
-                    username: currentUser.username || 'You',
+                    username: currentUser.username,
                 },
                 _optimistic: true, //UI flag
             };
 
-            //update message cache
-            queryClient.setQueryData(chatMessagesKey, (old: any) => {
+            //update messages cache
+            queryClient.setQueryData<MessageInfiniteData>(chatMessagesKey, (old) => {
                 if (!old?.pages) return old;
 
                 const newPages = [...old.pages];
                 newPages[0] = {
                     ...newPages[0],
-                    messages: [optimisticMessage, ...newPages[0].messages],
+                    messages: [...newPages[0].messages, optimisticMessage],
                 };
 
                 return {
@@ -66,12 +76,10 @@ export function useSendMessage(chatId: string, setInput: (value: string) => void
             });
 
             //update chat list
-            queryClient.setQueryData(chatListKey, (old: any[] | undefined) => {
+            queryClient.setQueryData<ChatsListQueryData>(chatListKey, (old) => {
                 if (!old) return old;
 
-                const chatIndex = old.findIndex(
-                    (chat: any) => chat.id === optimisticMessage.chatId
-                );
+                const chatIndex = old.findIndex((chat) => chat.id === optimisticMessage.chatId);
 
                 if (chatIndex === -1) {
                     return old;
@@ -88,12 +96,12 @@ export function useSendMessage(chatId: string, setInput: (value: string) => void
                 return [updatedChat, ...otherChats];
             });
 
-            // clear input
-            setInput('');
-
             return { prevMessages, prevChatList, tempId };
         },
-        onError: (err, content, context) => {
+        onError: (err, _, context) => {
+            console.error('Failed to send message');
+            toast.error('Failed to send message');
+
             //rollback
             if (context?.prevMessages) {
                 queryClient.setQueryData(chatMessagesKey, context.prevMessages);
@@ -101,19 +109,18 @@ export function useSendMessage(chatId: string, setInput: (value: string) => void
             if (context?.prevChatList) {
                 queryClient.setQueryData(chatListKey, context.prevChatList);
             }
-            console.error('Failed to send message: ', err);
         },
 
         onSuccess: (message, content, context) => {
             //replace optimistic with real message
-            queryClient.setQueryData(chatMessagesKey, (old: any) => {
+            queryClient.setQueryData<MessageInfiniteData>(chatMessagesKey, (old) => {
                 if (!old?.pages) return old;
 
-                const newPages = old.pages.map((page: any, idx: number) => {
+                const newPages = old.pages.map((page, idx) => {
                     if (idx === 0) {
                         return {
                             ...page,
-                            messages: page.messages.map((msg: any) =>
+                            messages: page.messages.map((msg) =>
                                 msg.id === context?.tempId ? message : msg
                             ),
                         };
@@ -128,7 +135,6 @@ export function useSendMessage(chatId: string, setInput: (value: string) => void
             });
         },
         onSettled: () => {
-            //Ensure Everyting is in sync
             queryClient.invalidateQueries({ queryKey: chatMessagesKey });
             queryClient.invalidateQueries({ queryKey: chatListKey });
         },

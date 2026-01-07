@@ -2,28 +2,29 @@
 
 import { useAuthStore } from '@/hooks/use-auth-store';
 import UserAvatar from './user/user-avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
-import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
 import { Button } from './ui/button';
-import { LogOut, MoreVertical } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { logout } from '@/services/auth/auth.api';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 
 function UserNav() {
     const router = useRouter();
+    const queryClient = useQueryClient();
     const { currentUser, logout: resetAuth } = useAuthStore();
 
     const handleLogout = async () => {
         try {
             await logout();
             resetAuth();
+            queryClient.clear();
 
-            toast.success('Logout successfully');
-            router.push('/login');
+            toast.success('Logged out successfully');
+            router.replace('/login');
         } catch (error) {
             const message = 'Logout failed';
-            console.error(message);
+            console.error(message, error);
             toast.error(message);
         }
     };
@@ -33,22 +34,12 @@ function UserNav() {
     return (
         <div className="w-full flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-                <UserAvatar username={currentUser.username} size={10} />
+                <UserAvatar username={currentUser.username} size={'size-10'} />
                 <p>{currentUser.username}</p>
             </div>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant={'outline'} size={'icon-sm'} className="rounded-full">
-                        <MoreVertical />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                    <DropdownMenuItem onClick={handleLogout} variant="destructive">
-                        <LogOut />
-                        Logout
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
+            <Button variant={'destructive'} size={'icon-sm'} onClick={handleLogout}>
+                <LogOut />
+            </Button>
         </div>
     );
 }

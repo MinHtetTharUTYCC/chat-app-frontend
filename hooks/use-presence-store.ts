@@ -27,6 +27,7 @@ export const usePresenceStore = create<PresenceState>((set, get) => ({
             },
         }));
     },
+    // use only outside of rendering logics like useEffect
     getPresence: (userId) => {
         return get().presence[userId] || null;
     },

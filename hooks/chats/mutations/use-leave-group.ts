@@ -2,20 +2,20 @@
 
 import { leaveGroup } from '@/services/chats/chat.api';
 import { chatKeys } from '@/services/chats/chat.keys';
-import { LeaveGroupResponse } from '@/types/types';
+import { ChatsListQueryData } from '@/types/chats';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-export const useLeaveGroup = (chatId: string, setChatsOpen: (open: boolean) => void) => {
+export const useLeaveGroup = (chatId: string) => {
     const queryClient = useQueryClient();
     const router = useRouter();
     const chatsListKey = chatKeys.all;
 
-    return useMutation<LeaveGroupResponse, Error, {}, {}>({
+    return useMutation({
         mutationFn: () => leaveGroup(chatId),
         onSuccess: () => {
-            const chats = queryClient.getQueryData<any[]>(chatsListKey);
+            const chats = queryClient.getQueryData<ChatsListQueryData>(chatsListKey);
             const remainingChats = chats?.filter((c) => c.id !== chatId);
 
             if (remainingChats) {
@@ -23,10 +23,10 @@ export const useLeaveGroup = (chatId: string, setChatsOpen: (open: boolean) => v
             } else {
                 router.push('/chats');
             }
-
+            toast.success('Left group successfully');
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: chatsListKey });
-            setChatsOpen(false);
-            toast.success('Leaved group successfully');
         },
     });
 };

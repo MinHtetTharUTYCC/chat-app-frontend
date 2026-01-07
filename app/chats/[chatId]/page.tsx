@@ -13,5 +13,3 @@ export default function ChatPage() {
 
     return <ChatWindow chatId={chatId} messageId={messageId} date={date} />;
 }
-
-ChatPage;

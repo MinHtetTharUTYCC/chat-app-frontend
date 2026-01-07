@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { useAuthStore } from '@/hooks/use-auth-store';
 import { LoginSchema, LoginValues } from './validation';
 import { login } from '@/services/auth/auth.api';
+import { getErrorMessage } from '@/lib/error-handler';
 
 export function LoginForm() {
     const router = useRouter();
@@ -39,12 +40,12 @@ export function LoginForm() {
             toast.success(`Welcome back, ${user.username}!`);
             router.push('/');
         } catch (error) {
-            toast.error('Invalid credentials');
+            toast.error(getErrorMessage(error));
         }
     }
 
     return (
-        <Card className="w-[350px]">
+        <Card className="w-[350px] shadow-lg">
             <CardHeader>
                 <CardTitle>Login to your account</CardTitle>
             </CardHeader>
@@ -91,7 +92,7 @@ export function LoginForm() {
                     </form>
                 </Form>
                 <div className="mt-4 text-center text-sm text-muted-foreground">
-                    Don't have an account?{' '}
+                    Don&apos;t have an account?
                     <Link href="/register" className="underline text-primary hover:text-primary/90">
                         Register
                     </Link>

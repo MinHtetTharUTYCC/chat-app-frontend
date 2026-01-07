@@ -1,29 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAppStore } from '../use-app-store';
+import { useIsMobile } from '../use-mobile';
 
 export function useTypingSound(isTyping: boolean) {
     const { isChatsOpen } = useAppStore();
 
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const [isMobile, setIsMobile] = useState(false);
 
-    useEffect(() => {
-        const checkMobile = () => {
-            const mobileBreakpoint = 768;
-            setIsMobile(window.innerWidth < mobileBreakpoint);
-        };
-
-        checkMobile();
-
-        window.addEventListener('resize', checkMobile);
-
-        // Cleanup
-        return () => {
-            window.removeEventListener('resize', checkMobile);
-        };
-    }, []);
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         if (!audioRef.current) {
@@ -51,5 +37,5 @@ export function useTypingSound(isTyping: boolean) {
                 audioRef.current.currentTime = 0;
             }
         };
-    }, [isTyping]);
+    }, [isTyping, isChatsOpen, isMobile]);
 }
