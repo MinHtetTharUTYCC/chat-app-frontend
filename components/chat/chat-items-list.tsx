@@ -50,7 +50,10 @@ function ChatItemsList({ chats }: { chats: ChatItemResponse[] }) {
                         displayName={displayName}
                         isDM={isDM}
                         lastMsgText={lastMessageText}
-                        isActive={pathname.includes(`/chats/${chat.id}`)}
+                        isActive={
+                            pathname === `/chats/${chat.id}` ||
+                            pathname.startsWith(`/chats/${chat.id}/`)
+                        }
                         otherParticipants={otherParticipants.map((p) => p.userId)}
                         timestamp={lastMessage?.updatedAt}
                         onClick={() => {

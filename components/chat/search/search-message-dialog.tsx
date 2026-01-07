@@ -72,7 +72,7 @@ function SarchMessageDialog({ isOpen, setIsOpen, chatId, closeSheet }: SearchMes
                             </div>
                         )}
 
-                        {!isLoading && messages.length === 0 && (
+                        {!isLoading && !error && messages.length === 0 && (
                             <p className="text-center p-4">No message found</p>
                         )}
 

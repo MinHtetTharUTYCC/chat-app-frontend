@@ -37,6 +37,7 @@ export function InviteUserDialog({ chatId }: { chatId: string }) {
                     setOpen(isOpen);
                     if (!isOpen) {
                         setSelectedUsers([]);
+                        setSearch('');
                     }
                 }}
                 title={'Invite Members'}

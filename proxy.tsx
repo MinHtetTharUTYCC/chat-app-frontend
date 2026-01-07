@@ -3,8 +3,8 @@ import type { NextRequest } from 'next/server';
 
 export function proxy(request: NextRequest) {
     // Check the refresh token cookie set by backend
-    const hasRefreshToken = request.cookies.has('refresh_token');
-
+    const refreshToken = request.cookies.get('refresh_token')?.value;
+    const hasRefreshToken = !!refreshToken && refreshToken.trim() !== '';
     const { pathname } = request.nextUrl;
 
     const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register');

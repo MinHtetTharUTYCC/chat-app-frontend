@@ -13,8 +13,7 @@ interface GroupChatPreviewProps {
 export function GroupChatPreview({ chatDetails }: GroupChatPreviewProps) {
     const { mutate: mutateJoinGroup, isPending: isJoiningGroup } = useJoinGroup(chatDetails.id);
 
-    const memberCount = chatDetails.participantsCount || chatDetails.participants?.length || 0;
-
+    const memberCount = chatDetails.participantsCount ?? chatDetails.participants?.length ?? 0;
     return (
         <div className="flex-1 flex items-center justify-center p-8">
             <div className="max-w-md w-full space-y-6 text-center">

@@ -336,7 +336,7 @@ export default function ChatSettingsSheet({
                                                     <div className="relative">
                                                         <UserAvatar
                                                             username={parti.user.username}
-                                                            size={'size-10'}
+                                                            size={'size-8'}
                                                         />
 
                                                         {isOnline && (

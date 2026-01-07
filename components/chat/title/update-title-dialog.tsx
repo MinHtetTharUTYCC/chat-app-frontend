@@ -67,9 +67,7 @@ function UpdateTitleDialog({
                         size="sm"
                         className="cursor-pointer"
                         onClick={() => {
-                            setChatTitle(inputTitle);
-                            setIsOpen(false);
-                            closeSheet();
+                            const trimmedTitle = inputTitle.trim();
 
                             mutateUpdateTitle(
                                 {
@@ -77,9 +75,14 @@ function UpdateTitleDialog({
                                     chatId,
                                 },
                                 {
+                                    onSuccess: () => {
+                                        setChatTitle(trimmedTitle);
+                                        setIsOpen(false);
+                                        closeSheet();
+                                    },
                                     onError: () => {
-                                        setInputTitle(title ?? 'New Group');
-                                        setChatTitle(title ?? 'New Group');
+                                        setInputTitle(title ?? 'Group Chat');
+                                        setChatTitle(title ?? 'Group Chat');
                                     },
                                 }
                             );

@@ -1,6 +1,7 @@
 import { useAuthStore } from '@/hooks/use-auth-store';
 import { refresh } from '@/services/auth/auth.api';
 import axios from 'axios';
+import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -31,7 +32,11 @@ api.interceptors.response.use(
 
         // Stop on rate limit
         if (error.response.status === 429) {
-            useAuthStore.getState().logout();
+            const retryAfter = error.response.headers['retry-after'];
+            if (retryAfter) {
+                const waitMs = Number(retryAfter) * 1000;
+                toast.error(`Too many requests: try again in ${waitMs}`);
+            }
             return Promise.reject(error);
         }
 

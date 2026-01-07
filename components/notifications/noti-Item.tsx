@@ -34,9 +34,9 @@ const NotiItem = memo(
                 }`;
                 break;
             case 'TITLE_UPDATED':
-                content = `${actor.username} ${chat.title ? 'changed' : 'removed'} group title ${
-                    chat.title
-                }`;
+                content = chat.title
+                    ? `${actor.username} changed group title to ${chat.title}.`
+                    : `${actor.username} removed the group title.`;
                 break;
             default:
                 break;

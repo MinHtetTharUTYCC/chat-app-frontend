@@ -37,6 +37,7 @@ export function AddMembersDialog({ chatId }: { chatId: string }) {
                     setOpen(isOpen);
                     if (!isOpen) {
                         setSelectedUsers([]);
+                        setSearch('');
                     }
                 }}
                 title={'Add Members'}
@@ -51,7 +52,9 @@ export function AddMembersDialog({ chatId }: { chatId: string }) {
                     mutateAddMembers(
                         { users: selectedUsers.map((u) => u.id) },
                         {
-                            onSuccess: () => {},
+                            onSuccess: () => {
+                                setOpen(false);
+                            },
                         }
                     )
                 }

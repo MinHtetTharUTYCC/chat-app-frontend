@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Bell, RotateCw } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { NotificationItem } from '@/types/notifications';
-import NotiItem from './noti-Item';
 import { useState } from 'react';
 import { useNotifications } from '@/hooks/notifications/queries/use-notifications';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/hooks/use-app-store';
+import NotiItem from './noti-Item';
 
 export function NotificationPopover() {
     const router = useRouter();

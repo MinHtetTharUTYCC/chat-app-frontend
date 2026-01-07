@@ -67,7 +67,15 @@ function UserPickerDialog({
                                     <div
                                         key={user.id}
                                         className="w-fit flex items-center gap-1 p-1 rounded-sm cursor-pointer hover:bg-red-300"
+                                        role="button"
+                                        tabIndex={0}
                                         onClick={() => onToggleUser(user)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                onToggleUser(user);
+                                            }
+                                        }}
                                     >
                                         <span className="w-fit text-sm">{user.username}</span>
                                         <X className="h-4 w-4" />
@@ -109,11 +117,14 @@ function UserPickerDialog({
                                 );
                             })
                         )}
-                    </ScrollArea>{' '}
+                    </ScrollArea>
                     <Button
-                        className={`w-full ${isLoading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                        className="w-full"
                         disabled={isConfirming || selectedUsers.length === 0}
-                        onClick={onConfirm}
+                        onClick={() => {
+                            if (selectedUsers.length === 0) return;
+                            onConfirm();
+                        }}
                     >
                         {isConfirming ? (
                             <Loader2 className="h-4 w-4 animate-spin" />

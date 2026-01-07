@@ -45,7 +45,8 @@ export function RegisterForm() {
     }
 
     return (
-        <Card className="w-87.5 shadow-lg">
+        <Card className="w-[350px] shadow-lg">
+            {' '}
             <CardHeader>
                 <CardTitle>Create an account</CardTitle>
             </CardHeader>
