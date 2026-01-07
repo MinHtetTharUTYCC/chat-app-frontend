@@ -27,6 +27,10 @@ export const getChats = async (): Promise<ChatItemResponse[]> => {
     const { data } = await api.get('/chats');
     return data;
 };
+export const searchChats = async (q: string): Promise<ChatItemResponse[]> => {
+    const { data } = await api.get('/chats/search', { params: { q } });
+    return data;
+};
 
 export const getChatDetails = async (chatId: string): Promise<ChatDetailsResponse> => {
     const { data } = await api.get(`/chats/${chatId}`);

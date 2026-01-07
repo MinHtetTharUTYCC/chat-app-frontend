@@ -5,24 +5,13 @@ import { ChatItem } from './chat-item';
 import { useAppStore } from '@/hooks/use-app-store';
 import { usePathname, useRouter } from 'next/navigation';
 import { ChatItemResponse } from '@/types/chats';
-import { useEffect, useRef } from 'react';
 
 function ChatItemsList({ chats }: { chats: ChatItemResponse[] }) {
     const pathname = usePathname();
     const router = useRouter();
 
-    const pendingNavigationRef = useRef(false);
-
     const { currentUser } = useAuthStore();
     const { setChatsOpen } = useAppStore();
-
-    //close list after navigation complete
-    useEffect(() => {
-        if (pendingNavigationRef.current) {
-            setChatsOpen(false);
-            pendingNavigationRef.current = false;
-        }
-    }, [pathname, setChatsOpen]);
 
     return (
         <>
@@ -57,8 +46,11 @@ function ChatItemsList({ chats }: { chats: ChatItemResponse[] }) {
                         otherParticipants={otherParticipants.map((p) => p.userId)}
                         timestamp={lastMessage?.updatedAt}
                         onClick={() => {
-                            pendingNavigationRef.current = true;
-                            router.push(`/chats/${chat.id}`);
+                            const chatRoute = `/chats/${chat.id}`;
+                            setChatsOpen(false);
+                            if (!pathname.startsWith(chatRoute)) {
+                                router.push(chatRoute);
+                            }
                         }}
                     />
                 );

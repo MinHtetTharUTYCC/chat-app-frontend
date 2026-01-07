@@ -18,6 +18,7 @@ import { useCreateGroup } from '@/hooks/chats/mutations/use-create-group';
 import { User } from '@/types/users';
 import { useSearchUsers } from '@/hooks/users/queries/use-search-users';
 import UserAvatar from '../user/user-avatar';
+import { useDebounce } from '@/hooks/search/use-debounce';
 
 export function CreateChatDialog() {
     const [open, setOpen] = useState(false);
@@ -28,7 +29,12 @@ export function CreateChatDialog() {
     const [clickedDMUser, setClickedDMUser] = useState<User | null>(null);
     const [isUserOpen, setIsUserOpen] = useState(false);
 
-    const { data: searchedUsers = [], isLoading: isLoadingSearch } = useSearchUsers(search, open);
+    const deboundedSearch = useDebounce(search, 500);
+
+    const { data: searchedUsers = [], isLoading: isLoadingSearch } = useSearchUsers(
+        deboundedSearch,
+        open
+    );
 
     const { mutate: mutateCreateGroup, isPending: isCreatingGroup } = useCreateGroup();
 
@@ -65,7 +71,7 @@ export function CreateChatDialog() {
                                 placeholder="Search users..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                            />{' '}
+                            />
                             <ScrollArea className="h-100 border rounded-md p-2">
                                 {isLoadingSearch && (
                                     <Loader2 className="h-4 w-4 animate-spin mx-auto" />

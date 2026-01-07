@@ -9,12 +9,15 @@ import { NotificationPopover } from '../notifications/notification-popover';
 import UserNav from '../user-nav';
 import { usePathname, useRouter } from 'next/navigation';
 import { ModeToggle } from '../mode-toggle';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePresenceStore } from '@/hooks/use-presence-store';
 import ChatItemsList from './chat-items-list';
 import { useChats } from '@/hooks/chats';
 import { useAllPresense } from '@/hooks/presence/queries/use-all-presence';
 import Link from 'next/link';
+import { useDebounce } from '@/hooks/search/use-debounce';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSearchChats } from '@/hooks/chats/queries/use-search-chats';
 
 export function ChatSidebar() {
     const pathname = usePathname();
@@ -22,7 +25,12 @@ export function ChatSidebar() {
 
     const bulkUpdatePresence = usePresenceStore((state) => state.bulkUpdatePresence);
 
-    const { data: chats, isLoading } = useChats();
+    const [searchQ, setSearchQ] = useState('');
+    const debouncedSearch = useDebounce(searchQ, 500);
+
+    const { data: chats = [], isLoading } = useChats();
+    const { data: searchedChats = [], isLoading: isSearchingChats } =
+        useSearchChats(debouncedSearch);
 
     useEffect(() => {
         if (!isLoading && chats && chats.length > 0) {
@@ -70,27 +78,51 @@ export function ChatSidebar() {
                 </div>
                 <div className="relative">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search chats..." className="pl-8" />
+                    <Input
+                        placeholder="Search chats..."
+                        className="pl-8"
+                        type="text"
+                        value={searchQ}
+                        onChange={(e) => setSearchQ(e.target.value)}
+                    />
                 </div>
             </div>
 
             {/* Chat List */}
-            <div className="flex-1 min-h-0">
-                <ScrollArea className="h-full p-2">
-                    {isLoading ? (
-                        Array.from({ length: 50 }).map((_, i) => (
-                            <Skeleton key={i} className="h-16 w-full mb-2" />
-                        ))
-                    ) : chats?.length ? (
-                        <ChatItemsList chats={chats} />
-                    ) : (
-                        <div className="mt-40 flex flex-col text-center text-muted-foreground items-center justify-center">
-                            <CreateChatDialog />
-                            Start a new chat
-                        </div>
-                    )}
-                </ScrollArea>
-            </div>
+            {debouncedSearch.trim() ? (
+                <div className="flex-1 min-h-0">
+                    <ScrollArea className="h-full p-2">
+                        {isSearchingChats ? (
+                            Array.from({ length: 50 }).map((_, i) => (
+                                <Skeleton key={i} className="h-16 w-full mb-2" />
+                            ))
+                        ) : searchedChats.length > 0 ? (
+                            <ChatItemsList chats={searchedChats} />
+                        ) : (
+                            <div className="mt-40 flex flex-col text-center text-muted-foreground items-center justify-center">
+                                No Chats Found
+                            </div>
+                        )}
+                    </ScrollArea>
+                </div>
+            ) : (
+                <div className="flex-1 min-h-0">
+                    <ScrollArea className="h-full p-2">
+                        {isLoading ? (
+                            Array.from({ length: 50 }).map((_, i) => (
+                                <Skeleton key={i} className="h-16 w-full mb-2" />
+                            ))
+                        ) : chats.length > 0 ? (
+                            <ChatItemsList chats={chats} />
+                        ) : (
+                            <div className="mt-40 flex flex-col text-center text-muted-foreground items-center justify-center">
+                                <CreateChatDialog />
+                                Start a new chat
+                            </div>
+                        )}
+                    </ScrollArea>
+                </div>
+            )}
 
             {/* Bottom User Bar */}
             <div className="p-4 border-t flex items-center justify-between">
