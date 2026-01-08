@@ -16,7 +16,6 @@ import { useChats } from '@/hooks/chats';
 import { useAllPresense } from '@/hooks/presence/queries/use-all-presence';
 import Link from 'next/link';
 import { useDebounce } from '@/hooks/search/use-debounce';
-import { useQueryClient } from '@tanstack/react-query';
 import { useSearchChats } from '@/hooks/chats/queries/use-search-chats';
 
 export function ChatSidebar() {

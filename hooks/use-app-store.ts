@@ -1,5 +1,4 @@
-import { create } from "zustand";
-
+import { create } from 'zustand';
 
 interface AppState {
     isChatsOpen: boolean;
@@ -8,6 +7,6 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set) => ({
     currentUser: null,
-    isChatsOpen: false,
+    isChatsOpen: true,
     setChatsOpen: (open) => set({ isChatsOpen: open }),
 }));
