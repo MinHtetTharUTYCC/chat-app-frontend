@@ -3,7 +3,7 @@ import { refresh } from '@/services/auth/auth.api';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL!;
+const BACKEND_URL = '/api_proxy';
 
 let isRefreshing = false;
 let refreshPromise: Promise<string> | null = null;

@@ -1,8 +1,6 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-    /* config options here */
-
     images: {
         remotePatterns: [
             {
@@ -12,6 +10,14 @@ const nextConfig: NextConfig = {
                 pathname: '/**',
             },
         ],
+    },
+    async rewrites() {
+        return [
+            {
+                source: '/api_proxy/:path*',
+                destination: `${process.env.NEXT_PUBLIC_API_URL}/:path*`,
+            },
+        ];
     },
 };
 
