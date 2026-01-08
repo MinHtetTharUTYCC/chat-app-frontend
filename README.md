@@ -1,38 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Chat App Frontend
+
+[![Ask DeepWiki](https://devin.ai/assets/askdeepwiki.png)](https://deepwiki.com/MinHtetTharUTYCC/chat-app-frontend)
+
+This is the frontend for a modern, real-time chat application built with Next.js and TypeScript. It features direct and group messaging, user presence, real-time notifications, and a clean, responsive interface powered by Shadcn/ui and Tailwind CSS.
+
+## 🚀 Live Demo
+[Chat App](https://chat-app-dusky-chi.vercel.app/)
+
+## Features
+
+-   **Authentication**: Secure user login and registration with session management using JWT and refresh tokens.
+-   **Real-Time Chat**: Direct (1-on-1) and group conversations powered by Socket.IO.
+-   **Presence System**: See when users are online, offline, or their last seen status, updated in real-time.
+-   **Typing Indicators**: Know when another user is typing a message.
+-   **Message Management**: Send, edit, delete, and pin messages within a chat.
+-   **Group Management**: Create groups, update group titles, invite new members, add existing users, and leave groups.
+-   **Search Functionality**: Search for chats in the sidebar and search for specific messages within a conversation.
+-   **Notifications**: Real-time pop-up notifications for new messages, group invites, pinned messages, and more.
+-   **Theming**: Switch between light and dark modes.
+-   **Responsive Design**: A seamless experience on both desktop and mobile devices.
+
+## Tech Stack
+
+-   **Framework**: [Next.js](https://nextjs.org/) (App Router)
+-   **Language**: [TypeScript](https://www.typescriptlang.org/)
+-   **State Management**: [Zustand](https://github.com/pmndrs/zustand) & [TanStack Query](https://tanstack.com/query/latest)
+-   **UI Components**: [Shadcn/ui](https://ui.shadcn.com/) built on [Radix UI](https://www.radix-ui.com/)
+-   **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+-   **Real-time Communication**: [Socket.IO Client](https://socket.io/docs/v4/client-api/)
+-   **Form Handling**: [React Hook Form](https://react-hook-form.com/) & [Zod](https://zod.dev/)
+-   **HTTP Client**: [Axios](https://axios-http.com/)
+
+## Project Structure
+
+The codebase is organized to maintain separation of concerns and improve scalability.
+
+```
+/
+├── app/                  # Next.js App Router: layouts, pages, and routes
+│   ├── (auth)/           # Authentication-related pages (login, register)
+│   └── chats/            # Main chat interface layout and pages
+├── components/           # Reusable React components
+│   ├── auth/             # Authentication forms and logic
+│   ├── chat/             # Chat-specific components (sidebar, window, messages)
+│   ├── ui/               # Reusable UI primitives from Shadcn/ui
+│   └── ...
+├── hooks/                # Custom React hooks
+│   ├── chats/            # TanStack Query hooks for chat data
+│   ├── messages/         # TanStack Query hooks for message data
+│   └── ...
+├── lib/                  # Utility functions, API client, and helpers
+├── services/             # API service layer, organized by domain
+└── types/                # TypeScript type definitions
+```
 
 ## Getting Started
 
-First, run the development server:
+Follow these steps to get the development environment running.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Prerequisites
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+-   Node.js (v20.9.0 or later)
+-   [pnpm](https://pnpm.io/) package manager
+-   A running instance of the corresponding backend server.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Installation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/minhtettharutycc/chat-app-frontend.git
+    cd chat-app-frontend
+    ```
 
-## Learn More
+2.  **Install dependencies:**
+    ```bash
+    pnpm install
+    ```
 
-To learn more about Next.js, take a look at the following resources:
+3.  **Set up environment variables:**
+    Create a `.env.local` file in the root of the project and add the URL of your running backend API.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+    ```env
+    NEXT_PUBLIC_API_URL=http://localhost:8000
+    ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4.  **Run the development server:**
+    The application will start on `http://localhost:9000`.
+    ```bash
+    pnpm dev
+    ```
 
-## Deploy on Vercel
+## Available Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/MinHtetTharUTYCC/chat-app-frontend?utm_source=oss&utm_medium=github&utm_campaign=MinHtetTharUTYCC%2Fchat-app-frontend&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+-   `pnpm dev`: Runs the application in development mode at `http://localhost:9000`.
+-   `pnpm build`: Creates an optimized production build of the application.
+-   `pnpm start`: Starts the production server from the build files.
+-   `pnpm lint`: Runs ESLint to check for code quality and style issues.
