@@ -58,6 +58,18 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
         enabled: chatDetails?.isParticipant ?? false,
     });
 
+    useEffect(() => {
+        console.log('change in msg ID');
+        hasScrolledToMiddleRef.current = false;
+        prevScrollHeightRef.current = 0;
+        prevScrollTopRef.current = 0;
+    }, [messageId]);
+
+    useEffect(() => {
+        hasScrolledToBottomInitiallyRef.current = false;
+        hasScrolledToMiddleRef.current = false;
+    }, [chatId]);
+
     // initially auto-scroll to position(message/date) or bottom(default)
     useEffect(() => {
         if (data?.pages[0]) {
@@ -83,6 +95,8 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
                             }
                         });
                     }
+                } else {
+                    console.log('already scrolled to middle');
                 }
             } else if (bottomRef.current) {
                 // Normal load - scroll to bottom
@@ -169,17 +183,6 @@ export function ChatWindow({ chatId, messageId, date }: ChatWindowProps) {
             prevScrollHeightRef.current = 0;
         }
     }, [isFetchingNextPage]);
-
-    useEffect(() => {
-        hasScrolledToMiddleRef.current = false;
-        prevScrollHeightRef.current = 0;
-        prevScrollTopRef.current = 0;
-    }, [messageId]);
-
-    useEffect(() => {
-        hasScrolledToBottomInitiallyRef.current = false;
-        hasScrolledToMiddleRef.current = false;
-    }, [chatId]);
 
     const messages = useMemo(() => {
         if (!data?.pages) return [];
